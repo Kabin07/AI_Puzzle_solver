@@ -1,0 +1,658 @@
+/* ==========================================================================
+   AI 8-Puzzle Visualizer: custom styles on top of Bootstrap 5.3
+   Colour tokens adapt to Bootstrap's light / dark colour modes.
+   ========================================================================== */
+
+:root,
+[data-bs-theme='light'] {
+  --ep-accent: #4f46e5;
+  --ep-accent-soft: #eef2ff;
+  --ep-accent-text: #3730a3;
+  --ep-board-bg: #e0e7ff;
+  --ep-tile-bg: #4f46e5;
+  --ep-tile-fg: #ffffff;
+  --ep-tile-ok: #059669;
+  --ep-blank-bg: rgba(79, 70, 229, 0.12);
+  --ep-blank-border: rgba(79, 70, 229, 0.55);
+  --ep-moved: #f59e0b;
+  --ep-hero-from: #eef2ff;
+  --ep-hero-to: #f5f3ff;
+  --ep-chart-line: #4f46e5;
+  --ep-chart-grid: rgba(0, 0, 0, 0.08);
+  --ep-code-bg: #f8f9fb;
+}
+
+[data-bs-theme='dark'] {
+  --ep-accent: #818cf8;
+  --ep-accent-soft: rgba(129, 140, 248, 0.14);
+  --ep-accent-text: #c7d2fe;
+  --ep-board-bg: #1e1b4b;
+  --ep-tile-bg: #6366f1;
+  --ep-tile-fg: #ffffff;
+  --ep-tile-ok: #10b981;
+  --ep-blank-bg: rgba(129, 140, 248, 0.16);
+  --ep-blank-border: rgba(165, 180, 252, 0.6);
+  --ep-moved: #fbbf24;
+  --ep-hero-from: #17153a;
+  --ep-hero-to: #1d1a40;
+  --ep-chart-line: #a5b4fc;
+  --ep-chart-grid: rgba(255, 255, 255, 0.1);
+  --ep-code-bg: #161a20;
+}
+
+body {
+  background: var(--bs-tertiary-bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+main {
+  flex: 1;
+}
+
+/* ---------- Navbar / brand ---------- */
+.navbar-brand img {
+  width: 28px;
+  height: 28px;
+}
+.navbar .nav-link.active {
+  font-weight: 600;
+  color: var(--ep-accent) !important;
+}
+.text-accent {
+  color: var(--ep-accent) !important;
+}
+.bg-accent-soft {
+  background: var(--ep-accent-soft) !important;
+}
+.btn-accent {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--ep-accent);
+  --bs-btn-border-color: var(--ep-accent);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #4338ca;
+  --bs-btn-hover-border-color: #4338ca;
+  --bs-btn-active-bg: #3730a3;
+  --bs-btn-disabled-bg: var(--ep-accent);
+  --bs-btn-disabled-border-color: var(--ep-accent);
+}
+.badge-assigned {
+  background: var(--ep-accent);
+  color: #fff;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  border-color: var(--bs-border-color-translucent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.card-header {
+  background: transparent;
+  font-weight: 600;
+}
+.card-title-sm {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bs-secondary-color);
+  font-weight: 600;
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  background: linear-gradient(135deg, var(--ep-hero-from), var(--ep-hero-to));
+  border-bottom: 1px solid var(--bs-border-color-translucent);
+}
+.hero h1 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.info-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color-translucent);
+  font-size: 0.9rem;
+}
+
+/* ---------- Animated puzzle board ---------- */
+.puzzle-board {
+  --tile-ms: 260ms;
+  --pad: 6px;
+  position: relative;
+  width: 100%;
+  max-width: var(--board-max, 220px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  padding: var(--pad);
+  border-radius: 14px;
+  background: var(--ep-board-bg);
+  container-type: inline-size;
+}
+.puzzle-board.board-lg {
+  --board-max: 300px;
+}
+.puzzle-board.board-sm {
+  --board-max: 150px;
+}
+.puzzle-board .tile {
+  position: absolute;
+  top: var(--pad);
+  left: var(--pad);
+  width: calc((100% - 2 * var(--pad)) / 3);
+  height: calc((100% - 2 * var(--pad)) / 3);
+  padding: 3px;
+  transition: transform var(--tile-ms) cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+.puzzle-board .tile > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  background: var(--ep-tile-bg);
+  color: var(--ep-tile-fg);
+  font-weight: 700;
+  font-size: 13cqw;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+  user-select: none;
+  transition: background-color 0.25s;
+}
+.puzzle-board .tile.in-place > span {
+  background: var(--ep-tile-ok);
+}
+.puzzle-board .tile.tile-blank > span {
+  background: var(--ep-blank-bg);
+  border: 2px dashed var(--ep-blank-border);
+  box-shadow: none;
+}
+.puzzle-board .tile.just-moved > span {
+  outline: 3px solid var(--ep-moved);
+  outline-offset: -3px;
+}
+.puzzle-board.no-anim .tile {
+  transition: none !important;
+}
+.puzzle-board.is-goal {
+  box-shadow: 0 0 0 3px var(--ep-tile-ok);
+}
+.board-caption {
+  min-height: 1.5rem;
+}
+
+/* ---------- Mini boards (successors, lists, path) ---------- */
+.mini-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  width: var(--mini, 60px);
+  flex: 0 0 auto;
+}
+.mini-board > div {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: var(--ep-tile-bg);
+  color: #fff;
+  font-size: calc(var(--mini, 60px) / 5);
+  font-weight: 600;
+  line-height: 1;
+}
+.mini-board > div.ok {
+  background: var(--ep-tile-ok);
+}
+.mini-board > div.blank {
+  background: transparent;
+  border: 1px dashed var(--ep-blank-border);
+}
+.mini-board > div.moved {
+  background: var(--ep-moved);
+  color: #1f1300;
+}
+.mini-sm {
+  --mini: 50px;
+}
+.mini-lg {
+  --mini: 84px;
+}
+
+/* ---------- Grid editor (puzzle input) ---------- */
+.grid-editor {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  max-width: 150px;
+}
+.grid-editor input {
+  aspect-ratio: 1 / 1;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.15rem;
+  padding: 0;
+}
+.grid-editor input.is-blank {
+  background: var(--ep-blank-bg);
+  border-style: dashed;
+}
+
+/* ---------- Controls ---------- */
+.controls-bar {
+  z-index: 1010;
+  top: 0.5rem;
+}
+.controls-bar .btn {
+  white-space: nowrap;
+}
+.speed-range {
+  width: 130px;
+}
+.kbd-hint kbd {
+  font-size: 0.7rem;
+}
+
+/* ---------- Stats ---------- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 0.5rem;
+}
+.stat {
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.6rem;
+  background: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color-translucent);
+}
+.stat .label {
+  font-size: 0.72rem;
+  color: var(--bs-secondary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.stat .value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.stat.stat-accent {
+  background: var(--ep-accent-soft);
+  border-color: transparent;
+}
+.stat.stat-accent .value {
+  color: var(--ep-accent-text);
+}
+
+/* ---------- Successors / lists ---------- */
+.succ-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.succ-card {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--bs-border-color-translucent);
+  background: var(--bs-body-bg);
+  min-width: 175px;
+}
+.succ-card.status-added {
+  border-left: 4px solid var(--bs-success);
+}
+.succ-card.status-explored {
+  border-left: 4px solid var(--bs-secondary);
+  opacity: 0.7;
+}
+.succ-card.status-in-frontier {
+  border-left: 4px solid var(--bs-warning);
+  opacity: 0.85;
+}
+.succ-card.status-replaced {
+  border-left: 4px solid var(--bs-info);
+}
+.succ-meta {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+.list-box {
+  max-height: 360px;
+  overflow: auto;
+}
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.25rem;
+  border-bottom: 1px solid var(--bs-border-color-translucent);
+  font-size: 0.8rem;
+}
+.list-row:last-child {
+  border-bottom: 0;
+}
+.list-row .rank {
+  width: 1.6rem;
+  text-align: right;
+  color: var(--bs-secondary-color);
+  font-variant-numeric: tabular-nums;
+}
+.list-row.next-up {
+  background: var(--ep-accent-soft);
+  border-radius: 0.4rem;
+}
+.explored-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ---------- Solution path ---------- */
+.path-box {
+  max-height: 420px;
+  overflow: auto;
+}
+.path-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+.path-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.4rem;
+  border-radius: 0.6rem;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+.path-step:hover {
+  background: var(--bs-tertiary-bg);
+}
+.path-step.active {
+  border-color: var(--ep-accent);
+  background: var(--ep-accent-soft);
+}
+.path-arrow {
+  color: var(--bs-secondary-color);
+  font-size: 1rem;
+}
+
+/* ---------- Charts ---------- */
+.chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.chart .grid line {
+  stroke: var(--ep-chart-grid);
+}
+.chart text {
+  fill: var(--bs-secondary-color);
+  font-size: 13px;
+}
+.chart .line {
+  fill: none;
+  stroke: var(--ep-chart-line);
+  stroke-width: 2;
+}
+.chart .area {
+  fill: var(--ep-chart-line);
+  opacity: 0.1;
+}
+.chart .dot {
+  fill: var(--ep-moved);
+  stroke: var(--bs-body-bg);
+  stroke-width: 2;
+}
+.chart .bar {
+  fill: var(--ep-chart-line);
+  opacity: 0.85;
+}
+.chart .bar.assigned {
+  fill: var(--ep-moved);
+  opacity: 1;
+}
+.chart .bar-value {
+  fill: var(--bs-body-color);
+  font-weight: 600;
+}
+
+/* ---------- Comparison table ---------- */
+.table-compare {
+  font-size: 0.875rem;
+}
+.table-compare td,
+.table-compare th {
+  white-space: nowrap;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.table-compare tr.assigned-row > * {
+  background: var(--ep-accent-soft) !important;
+}
+
+/* ---------- Algorithm info page ---------- */
+.algo-nav {
+  top: 1rem;
+}
+.prop-badge {
+  font-size: 0.78rem;
+}
+pre.pseudocode {
+  background: var(--ep-code-bg);
+  border: 1px solid var(--bs-border-color-translucent);
+  border-radius: 0.6rem;
+  padding: 1rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre;
+  overflow: auto;
+}
+.formula {
+  font-family: var(--bs-font-monospace);
+  background: var(--ep-code-bg);
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  display: inline-block;
+  font-size: 0.85rem;
+}
+section[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* ---------- Footer ---------- */
+footer.site-footer {
+  border-top: 1px solid var(--bs-border-color-translucent);
+  background: var(--bs-body-bg);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 575.98px) {
+  .controls-bar {
+    position: static !important;
+  }
+  .succ-card {
+    min-width: 100%;
+  }
+  .puzzle-board.board-lg {
+    --board-max: 240px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puzzle-board .tile {
+    transition: none;
+  }
+}
+
+.state-text {
+  font-size: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+/* ---------- Navigation: page bar, section stepper, pager ---------- */
+.page-bar {
+  background: var(--bs-body-bg);
+}
+.page-bar .breadcrumb a {
+  text-decoration: none;
+  color: var(--ep-accent);
+}
+.section-steps {
+  gap: 0.25rem;
+}
+.section-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem 0.2rem 0.25rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-decoration: none;
+  color: var(--bs-secondary-color);
+  border: 1px solid transparent;
+}
+.section-step .num {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color);
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+.section-step:hover {
+  color: var(--bs-body-color);
+  background: var(--bs-tertiary-bg);
+}
+.section-step.active {
+  color: var(--ep-accent-text);
+  background: var(--ep-accent-soft);
+  font-weight: 600;
+}
+.section-step.active .num {
+  background: var(--ep-accent);
+  border-color: var(--ep-accent);
+  color: #fff;
+}
+.pager-card {
+  transition: border-color 0.15s, transform 0.15s;
+}
+.pager-card:hover {
+  border-color: var(--ep-accent);
+  transform: translateY(-2px);
+}
+
+/* ---------- How-to guides ---------- */
+.guide-card {
+  border-left: 4px solid var(--ep-accent);
+}
+.guide-step {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+.guide-step .num,
+.hub-num {
+  flex: 0 0 auto;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ep-accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+/* ---------- Home hub ---------- */
+.hub-card {
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  border-width: 1px;
+}
+.hub-card:hover,
+.hub-card:focus-visible {
+  border-color: var(--ep-accent);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.15);
+}
+.hub-card .hub-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ep-accent-soft);
+  color: var(--ep-accent);
+  font-size: 1.5rem;
+}
+.hub-card ul {
+  padding-left: 1.1rem;
+}
+.hub-card .hub-go {
+  color: var(--ep-accent);
+  font-weight: 600;
+}
+.quick-link {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--bs-border-color-translucent);
+  background: var(--bs-body-bg);
+  text-decoration: none;
+  color: var(--bs-body-color);
+  height: 100%;
+}
+.quick-link:hover {
+  border-color: var(--ep-accent);
+  color: var(--bs-body-color);
+}
+.quick-link i {
+  font-size: 1.3rem;
+  color: var(--ep-accent);
+}
+.toc-nav {
+  top: 1rem;
+}
+
+/* Clearer outline buttons (Bootstrap's grey outline looks disabled in dark mode) */
+[data-bs-theme='dark'] .btn-outline-secondary {
+  --bs-btn-color: #d6d9e0;
+  --bs-btn-border-color: #4b5262;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #343a46;
+  --bs-btn-hover-border-color: #6b7385;
+  --bs-btn-active-bg: #3d4452;
+}
+.btn-outline-accent {
+  --bs-btn-color: var(--ep-accent);
+  --bs-btn-border-color: var(--ep-accent);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--ep-accent);
+  --bs-btn-hover-border-color: var(--ep-accent);
+  --bs-btn-active-bg: var(--ep-accent);
+  --bs-btn-active-color: #fff;
+}
+.hero .badge {
+  white-space: normal;
+  text-align: left;
+  line-height: 1.4;
+}

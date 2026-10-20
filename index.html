@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>8-Puzzle AI Visualizer</title>
+  <meta name="description" content="Interactive 8-Puzzle Problem Solver using AI search algorithms: BFS, DFS, DLS, IDDLS, UCS, Greedy Best-First Search and A*.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <script>(function(){try{var t=localStorage.getItem('ep.theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-bs-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="home">
+  <div data-site-header></div>
+
+  <main>
+    <!-- ================= Hero: course, title, student ================= -->
+    <section class="hero py-5">
+      <div class="container-xxl">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-7">
+            <span class="badge rounded-pill bg-accent-soft text-accent mb-3 px-3 py-2">
+              <i class="bi bi-mortarboard"></i> Course: <span data-bind="course">Artificial Intelligence</span> · Digital Assignment (Case Study)
+            </span>
+            <h1 class="display-5 mb-3" data-bind="title">Interactive 8-Puzzle Problem Solver using AI Search Algorithms</h1>
+            <p class="lead text-body-secondary mb-4">
+              Solve the 8-puzzle with uninformed and informed search and watch every step: each node expansion, the frontier,
+              the explored set and the final solution path.
+            </p>
+            <div class="d-flex flex-wrap gap-2 mb-4">
+              <span class="info-pill"><i class="bi bi-person"></i> <b data-bind="student.name">Kabin Mukesh R</b></span>
+              <span class="info-pill"><i class="bi bi-person-badge"></i> Reg. No: <b data-bind="student.regNo">24BCT0117</b></span>
+              <span class="info-pill"><i class="bi bi-stars text-accent"></i> Assigned: <b>Greedy Best-First Search (No. 6)</b></span>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <a class="btn btn-accent btn-lg" href="solver.html?algo=gbfs"><i class="bi bi-play-fill"></i> Start Solving</a>
+              <a class="btn btn-outline-secondary btn-lg" href="#sections"><i class="bi bi-grid"></i> Explore all sections</a>
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <div class="card p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="card-title-sm">Live demo · GBFS + Manhattan</span>
+                <span class="badge text-bg-secondary" id="demoStep">Step 0</span>
+              </div>
+              <div id="demoBoard" class="board-lg"></div>
+              <p class="text-center small text-body-secondary mt-3 mb-0" id="demoCaption">Initial state</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= Navigation hub ================= -->
+    <section class="container-xxl py-5" id="sections" aria-labelledby="sectionsTitle">
+      <div class="text-center mb-4">
+        <h2 class="h3 fw-bold mb-1" id="sectionsTitle">Where would you like to go?</h2>
+        <p class="text-body-secondary mb-0">The project has four sections. Start with the Solver, or open any section directly.</p>
+      </div>
+      <div class="row g-4">
+        <div class="col-md-6">
+          <a href="solver.html?algo=gbfs" class="card hub-card h-100 text-decoration-none text-body">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="hub-icon"><i class="bi bi-play-circle"></i></span>
+                <div><span class="hub-num me-1">1</span> <span class="h5 fw-bold align-middle">Puzzle Solver</span></div>
+              </div>
+              <p class="text-body-secondary mb-2">Set up a puzzle and watch an algorithm solve it step by step.</p>
+              <ul class="small text-body-secondary mb-3">
+                <li>Enter initial and goal states, or generate a random solvable puzzle</li>
+                <li>Choose BFS, DFS, DLS, IDDLS, UCS, <b>GBFS</b> or A*, and the heuristic</li>
+                <li>See the current node, parent, successors, Open and Closed lists, g(n), h(n), f(n)</li>
+                <li>Run, Pause, Resume, Next, Previous, Reset and change the speed</li>
+              </ul>
+              <span class="hub-go">Open the Solver <i class="bi bi-arrow-right"></i></span>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-6">
+          <a href="compare.html" class="card hub-card h-100 text-decoration-none text-body">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="hub-icon"><i class="bi bi-bar-chart-line"></i></span>
+                <div><span class="hub-num me-1">2</span> <span class="h5 fw-bold align-middle">Algorithm Comparison</span></div>
+              </div>
+              <p class="text-body-secondary mb-2">Run every algorithm on the same puzzle and compare the results.</p>
+              <ul class="small text-body-secondary mb-3">
+                <li>Solution found, moves, nodes generated and expanded, max depth</li>
+                <li>Execution time and approximate memory usage</li>
+                <li>Charts for nodes, time, memory and solution length</li>
+                <li>Automatically generated observations and CSV export</li>
+              </ul>
+              <span class="hub-go">Open the Comparison <i class="bi bi-arrow-right"></i></span>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-6">
+          <a href="algorithms.html" class="card hub-card h-100 text-decoration-none text-body">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="hub-icon"><i class="bi bi-book"></i></span>
+                <div><span class="hub-num me-1">3</span> <span class="h5 fw-bold align-middle">Algorithm Description</span></div>
+              </div>
+              <p class="text-body-secondary mb-2">Learn how each search algorithm works.</p>
+              <ul class="small text-body-secondary mb-3">
+                <li>Description and working principle of all algorithms</li>
+                <li>Advantages, limitations, time and space complexity</li>
+                <li>Completeness and optimality, plus both heuristic functions</li>
+                <li>GBFS in depth: pseudocode, worked example, why it is not optimal</li>
+              </ul>
+              <span class="hub-go">Open the Descriptions <i class="bi bi-arrow-right"></i></span>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-6">
+          <a href="details.html" class="card hub-card h-100 text-decoration-none text-body">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="hub-icon"><i class="bi bi-info-circle"></i></span>
+                <div><span class="hub-num me-1">4</span> <span class="h5 fw-bold align-middle">Project Details</span></div>
+              </div>
+              <p class="text-body-secondary mb-2">Everything about the problem and this project.</p>
+              <ul class="small text-body-secondary mb-3">
+                <li>The 8-puzzle as a state-space search problem</li>
+                <li>Step-by-step user guide and keyboard shortcuts</li>
+                <li>Features, technologies used and project structure</li>
+                <li>Student details and references</li>
+              </ul>
+              <span class="hub-go">Open the Details <i class="bi bi-arrow-right"></i></span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick start -->
+      <h3 class="h6 fw-bold text-uppercase text-body-secondary mt-5 mb-3"><i class="bi bi-lightning-charge"></i> Quick start</h3>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <a class="quick-link" href="solver.html?algo=gbfs&h=manhattan&start=283164705&goal=123804765&speed=5&autorun=1">
+            <i class="bi bi-play-btn"></i><span><b>Solve the assignment example</b><br><span class="small text-body-secondary">GBFS + Manhattan, starts automatically</span></span></a>
+        </div>
+        <div class="col-md-4">
+          <a class="quick-link" href="solver.html?algo=gbfs&h=manhattan&start=702645381&goal=123804765&speed=8&autorun=1">
+            <i class="bi bi-exclamation-diamond"></i><span><b>See why GBFS is not optimal</b><br><span class="small text-body-secondary">63 moves found, 23 is optimal</span></span></a>
+        </div>
+        <div class="col-md-4">
+          <a class="quick-link" href="compare.html?start=702645381&goal=123804765&autorun=1">
+            <i class="bi bi-trophy"></i><span><b>Compare all algorithms</b><br><span class="small text-body-secondary">On a hard 23-move puzzle</span></span></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= Introduction ================= -->
+    <section class="border-top bg-body py-5" id="intro">
+      <div class="container-xxl">
+        <div class="row g-4 align-items-center">
+          <div class="col-lg-7">
+            <h2 class="h3 fw-bold mb-3">Introduction to the 8-Puzzle Problem</h2>
+            <p>
+              The 8-puzzle is a 3×3 board holding eight numbered tiles and one blank square. A tile next to the blank can slide
+              into it. Starting from an <b>initial state</b>, the task is to find a sequence of moves that reaches the
+              <b>goal state</b>. Each board is a state, each slide is an action costing 1, and a solution is a path through the
+              state space, which has 181,440 reachable states.
+            </p>
+            <p>
+              Uninformed algorithms (BFS, DFS, DLS, IDDLS) search blindly. Informed algorithms (GBFS, A*) use a
+              <b>heuristic</b> such as Misplaced Tiles or Manhattan Distance to head towards the goal and expand far fewer nodes.
+            </p>
+            <a href="details.html#problem" class="btn btn-sm btn-outline-secondary"><i class="bi bi-journal-text"></i> Full problem formulation and solvability</a>
+          </div>
+          <div class="col-lg-5">
+            <div class="card">
+              <div class="card-body">
+                <div class="card-title-sm mb-3">Assignment example</div>
+                <div class="row text-center g-3 align-items-center">
+                  <div class="col-5"><div id="exStart" class="board-sm"></div><div class="small mt-2 fw-semibold">Initial state</div></div>
+                  <div class="col-2 fs-3 text-body-secondary"><i class="bi bi-arrow-right"></i></div>
+                  <div class="col-5"><div id="exGoal" class="board-sm"></div><div class="small mt-2 fw-semibold">Goal state</div></div>
+                </div>
+                <p class="small text-body-secondary mt-3 mb-0">Green tiles are already in place. Optimal solution: 5 moves (Up, Up, Left, Down, Right).</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div data-site-footer></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/core/puzzle.js"></script>
+  <script src="js/core/heuristics.js"></script>
+  <script src="js/core/priority-queue.js"></script>
+  <script src="js/core/search-context.js"></script>
+  <script src="js/algorithms/gbfs.js"></script>
+  <script src="js/algorithms/bfs.js"></script>
+  <script src="js/algorithms/dfs.js"></script>
+  <script src="js/algorithms/dls.js"></script>
+  <script src="js/algorithms/best-first.js"></script>
+  <script src="js/algorithms/registry.js"></script>
+  <script src="js/ui/board.js"></script>
+  <script src="js/ui/layout.js"></script>
+  <script src="js/pages/home.js"></script>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solver · 8-Puzzle AI Visualizer</title>
+  <meta name="description" content="Solve the 8-puzzle step by step with BFS, DFS, DLS, IDDLS, UCS, Greedy Best-First Search or A*.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <script>(function(){try{var t=localStorage.getItem('ep.theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-bs-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="solver">
+  <div data-site-header></div>
+
+  <main class="container-xxl py-4">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+      <div>
+        <h1 class="h3 fw-bold mb-1">Puzzle Solver</h1>
+        <p class="text-body-secondary mb-0 small">Set up a puzzle, pick an algorithm, then press <b>Run</b> to watch the search and the solution.</p>
+      </div>
+      <span class="small text-body-secondary kbd-hint d-none d-md-inline">Shortcuts: <kbd>Space</kbd> pause / resume · <kbd>←</kbd> <kbd>→</kbd> step</span>
+    </div>
+
+    <!-- How to use (collapsible, remembers if it was closed) -->
+    <div class="card mb-4 guide-card" id="guide">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold"><i class="bi bi-signpost-2 text-accent"></i> How to use the solver</span>
+          <button type="button" class="btn btn-sm btn-link text-body-secondary p-0" data-guide-toggle aria-expanded="true" aria-controls="guideBody">Hide</button>
+        </div>
+        <div id="guideBody">
+          <div class="row g-3 small">
+            <div class="col-md-4"><div class="guide-step"><span class="num">1</span><div><b>Set up the puzzle</b><br>Type the initial and goal states in the grids (use <kbd>_</kbd> or leave a cell empty for the blank), or click <b>Generate Random Puzzle</b>.</div></div></div>
+            <div class="col-md-4"><div class="guide-step"><span class="num">2</span><div><b>Choose an algorithm</b><br>GBFS (assigned) is selected. For GBFS / A* pick a heuristic; for DLS set the depth limit.</div></div></div>
+            <div class="col-md-4"><div class="guide-step"><span class="num">3</span><div><b>Run and explore</b><br>Press <b>Run</b>. Use <b>Pause</b>, <b>Next</b> / <b>Prev</b> to study each expansion, <b>Skip</b> to jump to the solution.</div></div></div>
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+            <span class="small text-body-secondary">Quick start:</span>
+            <a class="btn btn-sm btn-outline-secondary" href="solver.html?algo=gbfs&h=manhattan&start=283164705&goal=123804765&speed=5&autorun=1"><i class="bi bi-lightning-charge"></i> Assignment example with GBFS</a>
+            <a class="btn btn-sm btn-outline-secondary" href="solver.html?algo=gbfs&h=manhattan&start=702645381&goal=123804765&speed=8&autorun=1"><i class="bi bi-exclamation-diamond"></i> A case where GBFS is not optimal</a>
+            <a class="btn btn-sm btn-outline-secondary" href="solver.html?algo=astar&h=manhattan&start=702645381&goal=123804765&speed=8&autorun=1"><i class="bi bi-star"></i> Same puzzle with A*</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <!-- ============ Left: input + algorithm ============ -->
+      <aside class="col-lg-4 col-xl-3">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-grid-3x3-gap"></i> Puzzle Input</div>
+          <div class="card-body" id="setup"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="bi bi-cpu"></i> Algorithm</div>
+          <div class="card-body">
+            <label for="algoSelect" class="form-label small fw-semibold">Search algorithm</label>
+            <select id="algoSelect" class="form-select mb-3">
+              <optgroup label="Uninformed search">
+                <option value="bfs">Breadth-First Search (BFS)</option>
+                <option value="dfs">Depth-First Search (DFS)</option>
+                <option value="dls">Depth-Limited Search (DLS)</option>
+                <option value="iddls">Iterative Deepening DLS (IDDLS)</option>
+                <option value="ucs">Uniform-Cost Search (UCS)</option>
+              </optgroup>
+              <optgroup label="Informed search">
+                <option value="gbfs" selected>★ Greedy Best-First Search (GBFS), assigned</option>
+                <option value="astar">A* Search</option>
+              </optgroup>
+            </select>
+
+            <div id="heuristicGroup" class="mb-3">
+              <div class="form-label small fw-semibold">Heuristic h(n)</div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="heuristic" id="hManhattan" value="manhattan" checked>
+                <label class="form-check-label" for="hManhattan">Manhattan Distance</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="heuristic" id="hMisplaced" value="misplaced">
+                <label class="form-check-label" for="hMisplaced">Misplaced Tiles</label>
+              </div>
+            </div>
+
+            <div id="depthLimitGroup" class="mb-3 d-none">
+              <label for="depthLimit" class="form-label small fw-semibold">Depth limit (ℓ)</label>
+              <input type="number" id="depthLimit" class="form-control" min="0" max="60" value="10">
+              <div class="form-text">Nodes at depth ℓ are not expanded.</div>
+            </div>
+
+            <div id="maxDepthGroup" class="mb-3 d-none">
+              <label for="maxDepth" class="form-label small fw-semibold">Maximum depth for iterative deepening</label>
+              <input type="number" id="maxDepth" class="form-control" min="0" max="60" value="31">
+              <div class="form-text">Every solvable 8-puzzle needs at most 31 moves.</div>
+            </div>
+
+            <div id="algoBlurb" class="small text-body-secondary border-top pt-3"></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ============ Right: visualisation ============ -->
+      <section class="col-lg-8 col-xl-9">
+        <!-- Controls -->
+        <div class="card controls-bar sticky-top mb-4">
+          <div class="card-body py-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <button id="btnRun" class="btn btn-accent btn-sm"><i class="bi bi-play-fill"></i> Run</button>
+              <button id="btnPause" class="btn btn-outline-secondary btn-sm" disabled><i class="bi bi-pause-fill"></i> Pause</button>
+              <button id="btnResume" class="btn btn-outline-secondary btn-sm" disabled><i class="bi bi-play"></i> Resume</button>
+              <div class="btn-group btn-group-sm" role="group" aria-label="Step controls">
+                <button id="btnPrev" class="btn btn-outline-secondary" disabled title="Previous step (←)"><i class="bi bi-skip-backward-fill"></i> Prev</button>
+                <button id="btnNext" class="btn btn-outline-secondary" disabled title="Next step (→)">Next <i class="bi bi-skip-forward-fill"></i></button>
+              </div>
+              <button id="btnSkip" class="btn btn-outline-secondary btn-sm" disabled title="Jump to the solution / to the end"><i class="bi bi-fast-forward-fill"></i> Skip</button>
+              <button id="btnReset" class="btn btn-outline-danger btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+              <div class="d-flex align-items-center gap-2 ms-lg-auto">
+                <label for="speed" class="small text-body-secondary mb-0"><i class="bi bi-speedometer2"></i> Speed</label>
+                <input type="range" id="speed" class="form-range speed-range" min="1" max="10" value="5">
+                <span id="speedLabel" class="small text-body-secondary" style="min-width:3.5rem">450 ms</span>
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-3 mt-2">
+              <span id="phaseLabel" class="small fw-semibold text-nowrap">Ready</span>
+              <div class="progress flex-grow-1" style="height:6px" role="progressbar" aria-label="Playback progress">
+                <div id="progressBar" class="progress-bar" style="width:0%; background: var(--ep-accent)"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="alertBox"></div>
+
+        <!-- Boards -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="row g-4 align-items-center text-center">
+              <div class="col-6 col-md-3 order-1">
+                <div class="card-title-sm mb-2">Initial state</div>
+                <div id="boardInitial" class="board-sm"></div>
+              </div>
+              <div class="col-12 col-md-6 order-3 order-md-2">
+                <div class="card-title-sm mb-2" id="currentTitle">Current state</div>
+                <div id="boardCurrent" class="board-lg"></div>
+                <div id="currentCaption" class="board-caption small mt-2 text-body-secondary">Press Run to start the search.</div>
+              </div>
+              <div class="col-6 col-md-3 order-2 order-md-3">
+                <div class="card-title-sm mb-2">Goal state</div>
+                <div id="boardGoal" class="board-sm"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search process -->
+        <div class="row g-4 mb-4">
+          <div class="col-xl-6">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-activity"></i> Search Process</span>
+                <span id="evalBadge" class="badge bg-accent-soft text-accent"></span>
+              </div>
+              <div class="card-body">
+                <div class="stat-grid" id="statGrid"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-6">
+            <div class="card h-100">
+              <div class="card-header"><i class="bi bi-diagram-2"></i> Current Node &amp; Parent</div>
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-6">
+                    <div class="card-title-sm mb-2">Node being expanded</div>
+                    <div id="currentNode" class="d-flex gap-3 align-items-center small text-body-secondary">—</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="card-title-sm mb-2">Parent node</div>
+                    <div id="parentNode" class="d-flex gap-3 align-items-center small text-body-secondary">—</div>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+                  <div class="card-title-sm">Generated successor states</div>
+                  <span id="succCount" class="small text-body-secondary"></span>
+                </div>
+                <div id="successors" class="succ-list small text-body-secondary">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+          <div class="col-md-7">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-1">
+                <span><i class="bi bi-list-ol"></i> Frontier (Open List)</span>
+                <span id="frontierTitle" class="small text-body-secondary fw-normal"></span>
+              </div>
+              <div class="card-body list-box" id="frontierList"><span class="small text-body-secondary">—</span></div>
+            </div>
+          </div>
+          <div class="col-md-5">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-1">
+                <span><i class="bi bi-check2-square"></i> Explored (Closed List)</span>
+                <span id="exploredTitle" class="small text-body-secondary fw-normal"></span>
+              </div>
+              <div class="card-body list-box"><div id="exploredList" class="explored-grid"><span class="small text-body-secondary">—</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-graph-down"></i> <span id="chartTitle">Search progress</span></div>
+          <div class="card-body"><div id="chart" class="chart"><span class="small text-body-secondary">Run a search to see the chart.</span></div></div>
+        </div>
+
+        <!-- Summary -->
+        <div class="card mb-4 d-none" id="summaryCard">
+          <div class="card-header"><i class="bi bi-clipboard-data"></i> Solution Summary</div>
+          <div class="card-body" id="summaryBody"></div>
+        </div>
+
+        <!-- Solution path -->
+        <div class="card d-none" id="pathCard">
+          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-1">
+            <span><i class="bi bi-signpost-split"></i> Final Solution Path</span>
+            <span id="pathMeta" class="small text-body-secondary fw-normal"></span>
+          </div>
+          <div class="card-body path-box" id="pathBox"><div id="pathList" class="path-list"></div></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div data-site-pager></div>
+  <div data-site-footer></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/core/puzzle.js"></script>
+  <script src="js/core/heuristics.js"></script>
+  <script src="js/core/priority-queue.js"></script>
+  <script src="js/core/search-context.js"></script>
+  <script src="js/algorithms/gbfs.js"></script>
+  <script src="js/algorithms/bfs.js"></script>
+  <script src="js/algorithms/dfs.js"></script>
+  <script src="js/algorithms/dls.js"></script>
+  <script src="js/algorithms/best-first.js"></script>
+  <script src="js/algorithms/registry.js"></script>
+  <script src="js/data/algorithm-info.js"></script>
+  <script src="js/ui/board.js"></script>
+  <script src="js/ui/charts.js"></script>
+  <script src="js/ui/puzzle-input.js"></script>
+  <script src="js/ui/layout.js"></script>
+  <script src="js/pages/solver.js"></script>
+</body>
+</html>

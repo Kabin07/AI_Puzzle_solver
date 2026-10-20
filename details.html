@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project Details · 8-Puzzle AI Visualizer</title>
+  <meta name="description" content="The 8-puzzle problem, user guide, features, technologies and student details of the 8-Puzzle AI Visualizer.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <script>(function(){try{var t=localStorage.getItem('ep.theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-bs-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="details">
+  <div data-site-header></div>
+
+  <main class="container-xxl py-4">
+    <div class="mb-4">
+      <h1 class="h3 fw-bold mb-1">Project Details</h1>
+      <p class="text-body-secondary small mb-0">About the assignment, the 8-puzzle problem, how to use this application, and how it is built.</p>
+    </div>
+
+    <div class="row g-4">
+      <aside class="col-lg-3 d-none d-lg-block">
+        <nav class="toc-nav sticky-top" aria-label="On this page">
+          <div class="list-group small">
+            <a class="list-group-item list-group-item-action" href="#about"><i class="bi bi-person-badge"></i> Assignment &amp; student</a>
+            <a class="list-group-item list-group-item-action" href="#problem"><i class="bi bi-grid-3x3-gap"></i> The 8-puzzle problem</a>
+            <a class="list-group-item list-group-item-action" href="#guide"><i class="bi bi-signpost-2"></i> How to use</a>
+            <a class="list-group-item list-group-item-action" href="#features"><i class="bi bi-check2-square"></i> Features</a>
+            <a class="list-group-item list-group-item-action" href="#tech"><i class="bi bi-code-slash"></i> Technologies</a>
+            <a class="list-group-item list-group-item-action" href="#structure"><i class="bi bi-folder2-open"></i> Project structure</a>
+            <a class="list-group-item list-group-item-action" href="#references"><i class="bi bi-bookmark"></i> References</a>
+          </div>
+        </nav>
+      </aside>
+
+      <div class="col-lg-9">
+        <!-- About -->
+        <section id="about" class="card mb-4">
+          <div class="card-header"><i class="bi bi-person-badge"></i> Assignment &amp; Student</div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-sm mb-3">
+                <tbody>
+                  <tr><th class="w-25">Course</th><td data-bind="course">Artificial Intelligence</td></tr>
+                  <tr><th>Assignment</th><td>Digital Assignment (Case Study): <span data-bind="title">Interactive 8-Puzzle Problem Solver using AI Search Algorithms</span></td></tr>
+                  <tr><th>Student name</th><td data-bind="student.name">Kabin Mukesh R</td></tr>
+                  <tr><th>Registration number</th><td data-bind="student.regNo">24BCT0117</td></tr>
+                  <tr><th>Assigned algorithm</th><td><span class="badge badge-assigned">No. 6</span> Greedy Best-First Search (with Misplaced Tiles and Manhattan Distance heuristics)</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="small mb-0"><b>Objective:</b> understand state-space search by building an interactive web application that solves the
+              8-puzzle and visually shows how each algorithm searches for the goal state. Every algorithm is implemented from scratch in JavaScript.</p>
+          </div>
+        </section>
+
+        <!-- Problem -->
+        <section id="problem" class="card mb-4">
+          <div class="card-header"><i class="bi bi-grid-3x3-gap"></i> The 8-Puzzle Problem</div>
+          <div class="card-body">
+            <div class="row g-4">
+              <div class="col-md-7">
+                <p class="small">The 8-puzzle is a 3×3 board with eight numbered tiles and one blank square. A tile next to the blank can slide into it.
+                  Starting from an <b>initial state</b>, the goal is to find a sequence of moves that reaches the <b>goal state</b>.
+                  It is a classic example for studying state-space search because it is small enough to search completely but large enough to show
+                  clear differences between algorithms.</p>
+              </div>
+              <div class="col-md-5">
+                <div class="row text-center g-2 align-items-center">
+                  <div class="col-5"><div id="exStart" class="board-sm"></div><div class="small mt-1">Initial</div></div>
+                  <div class="col-2 fs-4 text-body-secondary"><i class="bi bi-arrow-right"></i></div>
+                  <div class="col-5"><div id="exGoal" class="board-sm"></div><div class="small mt-1">Goal</div></div>
+                </div>
+              </div>
+            </div>
+
+            <h3 class="h6 fw-bold mt-3">Problem formulation</h3>
+            <div class="table-responsive">
+              <table class="table table-sm small align-middle">
+                <tbody>
+                  <tr><th class="w-25">States</th><td>Any arrangement of tiles 1–8 and the blank on the 3×3 grid (9! = 362,880 arrangements).</td></tr>
+                  <tr><th>Initial state</th><td>Entered by the user or generated randomly (always solvable).</td></tr>
+                  <tr><th>Actions</th><td>Move the blank <b>Up, Down, Left</b> or <b>Right</b>. Only 2–4 moves are legal, depending on where the blank is.</td></tr>
+                  <tr><th>Transition model</th><td>Swap the blank with the neighbouring tile in the chosen direction.</td></tr>
+                  <tr><th>Goal test</th><td>The current state equals the goal state.</td></tr>
+                  <tr><th>Path cost</th><td>Every move costs 1, so path cost g(n) = number of moves.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3 class="h6 fw-bold mt-3">Key facts</h3>
+            <ul class="small mb-0">
+              <li><b>Reachable states:</b> 9!/2 = 181,440. The arrangements split into two halves that can never reach each other.</li>
+              <li><b>Solvability:</b> count the <i>inversions</i> (pairs of tiles in the wrong order, ignoring the blank). A puzzle is solvable when the start and goal have the same inversion parity. The app checks this before every run.</li>
+              <li><b>Branching factor:</b> 2, 3 or 4, about 2.67 on average.</li>
+              <li><b>Hardest instances</b> need 31 moves. Random solvable puzzles need about 22 on average.</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Guide -->
+        <section id="guide" class="card mb-4">
+          <div class="card-header"><i class="bi bi-signpost-2"></i> How to Use the Application</div>
+          <div class="card-body small">
+            <h3 class="h6 fw-bold"><i class="bi bi-play-circle text-accent"></i> Puzzle Solver</h3>
+            <ol>
+              <li><b>Enter the puzzle</b> in the two 3×3 grids. Type digits 1–8 and use <kbd>_</kbd> (or leave a cell empty) for the blank.
+                You can also type a whole state in the text box below each grid, e.g. <code>2 8 3 1 6 4 7 _ 5</code>. Arrow keys move between cells.</li>
+              <li>Or click <b>Generate Random Puzzle</b> (Easy, Medium, Hard or Fully random). Generated puzzles are always solvable.</li>
+              <li><b>Choose the algorithm.</b> GBFS is selected by default. For GBFS and A* choose the heuristic; for DLS set the depth limit; for IDDLS set the maximum depth.</li>
+              <li>Press <b>Run</b>. The search plays back one expansion per step, then the solution path is animated move by move.</li>
+              <li>Read the panels: current node and parent, generated successors (green = added, grey = already explored, yellow = already in the frontier), the Open and Closed lists, the h(n) / depth chart, then the Solution Summary and Final Solution Path.</li>
+            </ol>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle">
+                <thead class="table-light"><tr><th>Control</th><th>What it does</th><th>Keyboard</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Run</b></td><td>Solve the current puzzle and start the animation from the beginning</td><td><kbd>Space</kbd> (when idle)</td></tr>
+                  <tr><td><b>Pause</b> / <b>Resume</b></td><td>Stop and continue the animation</td><td><kbd>Space</kbd></td></tr>
+                  <tr><td><b>Next</b> / <b>Prev</b></td><td>Move one step forward or back (search steps, then solution moves)</td><td><kbd>→</kbd> / <kbd>←</kbd></td></tr>
+                  <tr><td><b>Skip</b></td><td>Jump to the solution; press again to jump to the end</td><td></td></tr>
+                  <tr><td><b>Reset</b></td><td>Clear the result and show the initial state</td><td></td></tr>
+                  <tr><td><b>Speed</b></td><td>Slider from slow (1.4 s per step) to very fast (12 ms per step)</td><td></td></tr>
+                  <tr><td>Solution path</td><td>Click any step in the Final Solution Path to jump to it</td><td></td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3 class="h6 fw-bold mt-3"><i class="bi bi-bar-chart-line text-accent"></i> Algorithm Comparison</h3>
+            <ol>
+              <li>The puzzle last used in the Solver is loaded automatically, so both pages work on the same instance.</li>
+              <li>Pick the heuristic, the DLS limit and the IDDLS maximum depth, then press <b>Run Comparison</b>.</li>
+              <li>Read the table (the assigned GBFS row is highlighted), the four charts and the observations. Use <b>Download table (CSV)</b> to save the results.</li>
+            </ol>
+
+            <h3 class="h6 fw-bold mt-3"><i class="bi bi-book text-accent"></i> Algorithm Description</h3>
+            <p>Use the menu on the left to jump to an algorithm. Each card has a <b>Try it in the solver</b> button that opens the Solver with that algorithm selected.</p>
+
+            <h3 class="h6 fw-bold mt-3"><i class="bi bi-compass text-accent"></i> Getting around</h3>
+            <ul class="mb-0">
+              <li>The <b>menu bar</b> at the top is the same on every page; the logo always returns to <b>Home</b>.</li>
+              <li>Inner pages show a <b>breadcrumb</b>, numbered <b>section steps</b> (1 Solver → 2 Comparison → 3 Algorithms → 4 Details) and a <b>Back to Home</b> button.</li>
+              <li>At the bottom of each page, <b>Previous / Next section</b> cards lead through the sections in order.</li>
+              <li>The <i class="bi bi-moon-stars"></i> button switches between light and dark mode.</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Features -->
+        <section id="features" class="card mb-4">
+          <div class="card-header"><i class="bi bi-check2-square"></i> Features (assignment requirements)</div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-sm small mb-0 align-middle">
+                <thead class="table-light"><tr><th>Requirement</th><th>Where to find it</th></tr></thead>
+                <tbody>
+                  <tr><td>Home page: course, title, student name, registration number, introduction, navigation</td><td><a href="index.html">Home</a></td></tr>
+                  <tr><td>Puzzle input: enter initial and goal states / generate a random solvable puzzle</td><td><a href="solver.html">Solver</a> → Puzzle Input</td></tr>
+                  <tr><td>Algorithm selection (BFS, DFS, DLS + depth limit, IDDLS, GBFS, A*) and heuristic selection</td><td><a href="solver.html">Solver</a> → Algorithm</td></tr>
+                  <tr><td>Initial, goal and current state, generated successors, final solution path, animated blank movement</td><td><a href="solver.html">Solver</a></td></tr>
+                  <tr><td>Current node, nodes generated and expanded, frontier, explored, depth, parent, path cost, h(n), g(n), f(n)</td><td><a href="solver.html">Solver</a> → Search Process</td></tr>
+                  <tr><td>Solution summary: found, moves, nodes, max depth, execution time, path cost, memory</td><td><a href="solver.html">Solver</a> → Solution Summary</td></tr>
+                  <tr><td>Comparison table of all algorithms on the same puzzle</td><td><a href="compare.html">Comparison</a></td></tr>
+                  <tr><td>Algorithm information: description, principle, advantages, limitations, complexity, completeness, optimality</td><td><a href="algorithms.html">Algorithms</a></td></tr>
+                  <tr><td>Run, Pause, Resume, Next Step, Previous Step, Reset, Change Speed</td><td><a href="solver.html">Solver</a> → controls bar</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tech -->
+        <section id="tech" class="card mb-4">
+          <div class="card-header"><i class="bi bi-code-slash"></i> Technologies Used</div>
+          <div class="card-body small">
+            <div class="row g-3">
+              <div class="col-sm-6 col-xl-3"><div class="border rounded-3 p-3 h-100"><i class="bi bi-filetype-html fs-4 text-accent"></i><div class="fw-semibold">HTML5</div>Semantic, accessible page structure</div></div>
+              <div class="col-sm-6 col-xl-3"><div class="border rounded-3 p-3 h-100"><i class="bi bi-filetype-css fs-4 text-accent"></i><div class="fw-semibold">CSS3</div>Custom properties, transitions for tile animation, dark mode</div></div>
+              <div class="col-sm-6 col-xl-3"><div class="border rounded-3 p-3 h-100"><i class="bi bi-filetype-js fs-4 text-accent"></i><div class="fw-semibold">JavaScript (ES6)</div>All search algorithms, priority queue and charts, written from scratch</div></div>
+              <div class="col-sm-6 col-xl-3"><div class="border rounded-3 p-3 h-100"><i class="bi bi-bootstrap fs-4 text-accent"></i><div class="fw-semibold">Bootstrap 5.3</div>UI framework, responsive grid, Bootstrap Icons</div></div>
+            </div>
+            <p class="mt-3 mb-0">Charts are drawn with hand-written <b>SVG</b>. The site is hosted on <b>GitHub Pages</b> and needs no build step.</p>
+          </div>
+        </section>
+
+        <!-- Structure -->
+        <section id="structure" class="card mb-4">
+          <div class="card-header"><i class="bi bi-folder2-open"></i> Project Structure</div>
+          <div class="card-body">
+<pre class="pseudocode mb-0">AI_Puzzle_solver/
+├── index.html          Home (hub)
+├── solver.html         Puzzle Solver
+├── compare.html        Algorithm Comparison
+├── algorithms.html     Algorithm Description
+├── details.html        Project Details (this page)
+├── css/style.css
+├── js/
+│   ├── config.js       student details and limits
+│   ├── core/           puzzle model, heuristics, priority queue, search context
+│   ├── algorithms/     gbfs.js ★, bfs.js, dfs.js, dls.js, best-first.js, registry.js
+│   ├── data/           algorithm descriptions
+│   ├── ui/             animated board, puzzle input, charts, shared navigation
+│   └── pages/          one controller per page
+├── assets/  images/  docs/  tests/
+└── README.md</pre>
+          </div>
+        </section>
+
+        <!-- References -->
+        <section id="references" class="card mb-4">
+          <div class="card-header"><i class="bi bi-bookmark"></i> References</div>
+          <div class="card-body small">
+            <ol class="mb-0">
+              <li>S. Russell and P. Norvig, <i>Artificial Intelligence: A Modern Approach</i>, 4th ed., Pearson, 2020. Chapter 3, "Solving Problems by Searching".</li>
+              <li>A. Reinefeld, "Complete Solution of the Eight-Puzzle and the Benefit of Node Ordering in IDA*", IJCAI, 1993.</li>
+              <li>Bootstrap 5.3 documentation, <a href="https://getbootstrap.com/docs/5.3/" target="_blank" rel="noopener">getbootstrap.com</a>, and Bootstrap Icons.</li>
+              <li>MDN Web Docs, <a href="https://developer.mozilla.org/" target="_blank" rel="noopener">developer.mozilla.org</a>.</li>
+            </ol>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div data-site-pager></div>
+  <div data-site-footer></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/core/puzzle.js"></script>
+  <script src="js/ui/board.js"></script>
+  <script src="js/ui/layout.js"></script>
+  <script>
+    // Example boards for the problem section
+    (function () {
+      const P = EP.puzzle;
+      new EP.ui.AnimatedBoard(document.getElementById('exStart'), { goal: P.DEFAULT_GOAL }).setState(P.EXAMPLE_START, { animate: false });
+      new EP.ui.AnimatedBoard(document.getElementById('exGoal'), { goal: P.DEFAULT_GOAL }).setState(P.DEFAULT_GOAL, { animate: false });
+    })();
+  </script>
+</body>
+</html>

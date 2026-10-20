@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comparison · 8-Puzzle AI Visualizer</title>
+  <meta name="description" content="Compare BFS, DFS, DLS, IDDLS, UCS, GBFS and A* on the same 8-puzzle instance.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <script>(function(){try{var t=localStorage.getItem('ep.theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-bs-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="compare">
+  <div data-site-header></div>
+
+  <main class="container-xxl py-4">
+    <div class="mb-3">
+      <h1 class="h3 fw-bold mb-1">Algorithm Comparison</h1>
+      <p class="text-body-secondary small mb-0">Every algorithm runs on the <b>same puzzle instance</b>. Times are measured without visualisation; very fast searches are repeated and averaged because browser timers are coarse.</p>
+    </div>
+
+    <div class="card mb-4 guide-card">
+      <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold"><i class="bi bi-signpost-2 text-accent"></i> How to compare</span>
+          <button type="button" class="btn btn-sm btn-link text-body-secondary p-0" data-guide-toggle aria-expanded="true" aria-controls="guideBody">Hide</button>
+        </div>
+        <div id="guideBody">
+          <div class="row g-3 small">
+            <div class="col-md-4"><div class="guide-step"><span class="num">1</span><div><b>Pick the puzzle</b><br>The puzzle you used in the Solver is loaded automatically. Edit it or generate a new one.</div></div></div>
+            <div class="col-md-4"><div class="guide-step"><span class="num">2</span><div><b>Set the options</b><br>Choose the heuristic for GBFS / A* and the depth limits for DLS and IDDLS.</div></div></div>
+            <div class="col-md-4"><div class="guide-step"><span class="num">3</span><div><b>Run Comparison</b><br>Read the table, the four charts and the auto-generated observations. Download the table as CSV if needed.</div></div></div>
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+            <span class="small text-body-secondary">Quick start:</span>
+            <a class="btn btn-sm btn-outline-secondary" href="compare.html?start=283164705&goal=123804765&autorun=1"><i class="bi bi-lightning-charge"></i> Assignment example</a>
+            <a class="btn btn-sm btn-outline-secondary" href="compare.html?start=702645381&goal=123804765&autorun=1"><i class="bi bi-fire"></i> Hard 23-move puzzle</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <aside class="col-lg-4 col-xl-3">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-grid-3x3-gap"></i> Puzzle Instance</div>
+          <div class="card-body" id="setup"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="bi bi-sliders"></i> Options</div>
+          <div class="card-body">
+            <label for="heuristic" class="form-label small fw-semibold">Heuristic for GBFS and A*</label>
+            <select id="heuristic" class="form-select form-select-sm mb-2">
+              <option value="manhattan" selected>Manhattan Distance</option>
+              <option value="misplaced">Misplaced Tiles</option>
+            </select>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="bothHeuristics" checked>
+              <label class="form-check-label small" for="bothHeuristics">Also run GBFS and A* with the other heuristic</label>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="includeUcs" checked>
+              <label class="form-check-label small" for="includeUcs">Include Uniform-Cost Search</label>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label for="depthLimit" class="form-label small fw-semibold">DLS limit ℓ</label>
+                <input type="number" id="depthLimit" class="form-control form-control-sm" min="0" max="60" value="10">
+              </div>
+              <div class="col-6">
+                <label for="maxDepth" class="form-label small fw-semibold">IDDLS max depth</label>
+                <input type="number" id="maxDepth" class="form-control form-control-sm" min="0" max="60" value="31">
+              </div>
+            </div>
+            <button id="btnCompare" class="btn btn-accent w-100"><i class="bi bi-play-fill"></i> Run Comparison</button>
+            <button id="btnCsv" class="btn btn-outline-secondary btn-sm w-100 mt-2" disabled><i class="bi bi-download"></i> Download table (CSV)</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="col-lg-8 col-xl-9">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span><i class="bi bi-table"></i> Performance on the same puzzle</span>
+            <span id="instanceInfo" class="small text-body-secondary fw-normal"></span>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-compare mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th scope="col">Algorithm</th>
+                    <th scope="col">Solution Found</th>
+                    <th scope="col" class="text-end">Moves</th>
+                    <th scope="col" class="text-end">Nodes Generated</th>
+                    <th scope="col" class="text-end">Nodes Expanded</th>
+                    <th scope="col" class="text-end">Max Depth</th>
+                    <th scope="col" class="text-end">Time</th>
+                    <th scope="col">Memory</th>
+                    <th scope="col">Optimal?</th>
+                  </tr>
+                </thead>
+                <tbody id="resultsBody">
+                  <tr><td colspan="9" class="text-center text-body-secondary py-4 small">Press <b>Run Comparison</b> to evaluate all algorithms.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+          <div class="col-xl-6">
+            <div class="card h-100">
+              <div class="card-header"><i class="bi bi-bar-chart-line"></i> Nodes expanded <span class="small text-body-secondary fw-normal">(log scale)</span></div>
+              <div class="card-body"><div id="chartExpanded" class="chart"><span class="small text-body-secondary">—</span></div></div>
+            </div>
+          </div>
+          <div class="col-xl-6">
+            <div class="card h-100">
+              <div class="card-header"><i class="bi bi-stopwatch"></i> Execution time <span class="small text-body-secondary fw-normal">(ms)</span></div>
+              <div class="card-body"><div id="chartTime" class="chart"><span class="small text-body-secondary">—</span></div></div>
+            </div>
+          </div>
+          <div class="col-xl-6">
+            <div class="card h-100">
+              <div class="card-header"><i class="bi bi-memory"></i> Peak memory <span class="small text-body-secondary fw-normal">(nodes held, log scale)</span></div>
+              <div class="card-body"><div id="chartMemory" class="chart"><span class="small text-body-secondary">—</span></div></div>
+            </div>
+          </div>
+          <div class="col-xl-6">
+            <div class="card h-100">
+              <div class="card-header"><i class="bi bi-signpost"></i> Solution length <span class="small text-body-secondary fw-normal">(moves, log scale)</span></div>
+              <div class="card-body"><div id="chartMoves" class="chart"><span class="small text-body-secondary">—</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="bi bi-lightbulb"></i> Observations</div>
+          <div class="card-body small" id="observations"><span class="text-body-secondary">Run the comparison to generate observations.</span></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div data-site-pager></div>
+  <div data-site-footer></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/core/puzzle.js"></script>
+  <script src="js/core/heuristics.js"></script>
+  <script src="js/core/priority-queue.js"></script>
+  <script src="js/core/search-context.js"></script>
+  <script src="js/algorithms/gbfs.js"></script>
+  <script src="js/algorithms/bfs.js"></script>
+  <script src="js/algorithms/dfs.js"></script>
+  <script src="js/algorithms/dls.js"></script>
+  <script src="js/algorithms/best-first.js"></script>
+  <script src="js/algorithms/registry.js"></script>
+  <script src="js/ui/board.js"></script>
+  <script src="js/ui/charts.js"></script>
+  <script src="js/ui/puzzle-input.js"></script>
+  <script src="js/ui/layout.js"></script>
+  <script src="js/pages/compare.js"></script>
+</body>
+</html>
