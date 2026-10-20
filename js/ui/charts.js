@@ -59,7 +59,7 @@
   function barChart(el, rows, { log = false, unit = '' } = {}) {
     const W = 640;
     const rowH = 34;
-    const m = { l: 140, r: 100, t: 6, b: 6 };
+    const m = { l: 165, r: 105, t: 6, b: 6 };
     const H = m.t + m.b + rows.length * rowH;
     const tf = (v) => (log ? Math.log10(Math.max(v, 0) + 1) : Math.max(v, 0));
     const maxV = Math.max(...rows.map((r) => tf(r.value || 0)), 1e-9);

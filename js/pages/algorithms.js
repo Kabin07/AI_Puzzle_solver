@@ -42,7 +42,7 @@
 
   function renderNav() {
     const items = [
-      ['gbfs', 'Greedy Best-First Search ★'],
+      ['gbfs', 'Greedy Best-First Search'],
       ['gbfs-example', 'Worked example'],
       ['heuristics', 'Heuristic functions'],
       ['overview', 'GBFS among other strategies'],

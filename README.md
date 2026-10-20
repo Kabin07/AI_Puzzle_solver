@@ -8,7 +8,7 @@ Artificial Intelligence · Digital Assignment (Case Study)
 | **Student** | Kabin Mukesh R |
 | **Registration No.** | 24BCT0117 |
 | **Assigned algorithm** | **No. 6: Greedy Best-First Search (GBFS)** |
-| **Live website** | https://kabin07.github.io/AI_Puzzle_solver/ |
+| **Live website** | https://ai-puzzle-solver.vercel.app (Vercel) |
 | **Repository** | https://github.com/Kabin07/AI_Puzzle_solver |
 
 ---
@@ -166,9 +166,17 @@ The test file contains a tiny BFS used only as a reference for the shortest path
 `solver.html?h=manhattan&start=283164705&goal=123804765&speed=6&autorun=1`
 Use `jump=solution` or `jump=end` to skip ahead, and `compare.html?start=702645381&goal=123804765&autorun=1` to run the comparison straight away.
 
-## Deployment (GitHub Pages)
+## Deployment
 
-The code is hosted at https://github.com/Kabin07/AI_Puzzle_solver. To publish it:
+**Vercel (live):** https://ai-puzzle-solver.vercel.app
+
+The site is deployed as a static project with the Vercel CLI. `.vercelignore` keeps the tests and local files out of the upload. To redeploy after changes:
+
+```bash
+vercel deploy --prod
+```
+
+**GitHub Pages (alternative).** The code is hosted at https://github.com/Kabin07/AI_Puzzle_solver. To publish it there as well:
 
 1. Open the repository on GitHub → **Settings → Pages**.
 2. Under **Build and deployment** choose **Source: Deploy from a branch**, then **Branch: `main`**, folder **`/ (root)`** → **Save**.
