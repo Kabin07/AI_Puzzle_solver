@@ -2,7 +2,7 @@
 
 ## Design goals
 
-1. **Correct, readable search code.** Each algorithm lives in its own file, mirrors the textbook pseudocode, and has no DOM code mixed in.
+1. **Correct, readable search code.** Greedy Best-First Search lives in its own file, mirrors the textbook pseudocode, and has no DOM code mixed in.
 2. **Faithful visualisation.** What is shown is exactly what the algorithm did, including discarded duplicates and the frontier order.
 3. **Zero build step.** Plain `<script>` files that run on GitHub Pages, from `file://`, and in Node (for the tests).
 
@@ -13,10 +13,10 @@
 │ Pages        js/pages/home.js · solver.js · compare.js · algorithms.js     │  DOM, events, playback
 ├───────────────────────────────────────────────────────────────────────────┤
 │ UI widgets   js/ui/board.js (AnimatedBoard, miniBoard) · puzzle-input.js   │  reusable components
-│              charts.js (SVG line/bar) · layout.js (theme, nav, bindings)   │
+│              charts.js (SVG bars/line) · layout.js (navigation, theme)     │
 ├───────────────────────────────────────────────────────────────────────────┤
-│ Algorithms   gbfs.js ★ · bfs.js · dfs.js · dls.js (DLS, IDDLS)             │  pure functions
-│              best-first.js (A*, UCS) · registry.js (EP.solve, timing)      │  (problem, ctx) → result
+│ Algorithm    gbfs.js ★ Greedy Best-First Search                            │  pure function
+│              registry.js (EP.solve, timing)                                │  (problem, ctx) → result
 ├───────────────────────────────────────────────────────────────────────────┤
 │ Core         puzzle.js · heuristics.js · priority-queue.js · search-context│  no DOM, Node-testable
 └───────────────────────────────────────────────────────────────────────────┘
@@ -30,49 +30,36 @@ A state is a 9-character string such as `"283164705"`, read row by row with `0` 
 Strings are immutable and hashable, so `Set` and `Map` lookups for the explored set and frontier are O(1).
 `puzzle.successors(state)` uses a precomputed neighbour table per blank position and returns `{ state, action, tile }`, where `action` is the direction the **blank** moves.
 
-## Algorithm contract
+## Greedy Best-First Search (`js/algorithms/gbfs.js`)
 
 ```js
-function algorithm(problem, ctx) → result
-// problem: { start, goal, heuristic(state) → number, depthLimit, maxDepth }
+function gbfs(problem, ctx) → result
+// problem: { start, goal, heuristic(state) → number }
 // ctx:     SearchContext (counters, limits, trace recorder)
 ```
 
-All algorithms:
-- are graph searches with an explored set,
-- do the goal test when a node is **selected for expansion**,
-- create every child through `ctx.makeNode()`, so *nodes generated* counts all of them, including duplicates that are later discarded,
-- call `ctx.record({...})` once per expansion. With tracing off, `canRecord()` is false and nothing is stored.
+- **Frontier:** `MinHeap` ordered by h(n), ties broken by node id (first in, first out), plus a `Map` state → node for O(1) "already in frontier" checks.
+- **Explored:** a `Set` of expanded states (graph search).
+- **Goal test:** when a node is popped (selected for expansion).
+- **Successors:** a child already explored or already in the frontier is discarded. Because h depends only on the state, a duplicate in the frontier has the same priority, so there is nothing to update.
+- **Evaluation:** every node stores g (moves so far), h, and f = h.
+- Every child is created through `ctx.makeNode()`, so *nodes generated* counts all of them, including discarded duplicates. `ctx.record({...})` stores one snapshot per expansion when tracing is on.
 
-`ctx.finish(status, goalNode)` walks parent pointers back to the root to build the solution path. `status` is one of `found | cutoff | failure | limit`.
+`ctx.finish(status, goalNode)` walks parent pointers back to the root to build the solution path. `status` is `found`, `failure` or `limit` (an expansion safety cap).
 
-### Frontier data structures
-
-| Algorithm | Frontier | Ordering / tie-break |
-|---|---|---|
-| BFS | array + head index (O(1) dequeue) | FIFO |
-| DFS, DLS, IDDLS | array as stack | LIFO; successors pushed in reverse so *Up* is tried first |
-| GBFS | `MinHeap` | h(n), then node id (FIFO) |
-| A* | `MinHeap` + lazy deletion | f(n), then h(n), then id |
-| UCS | `MinHeap` + lazy deletion | g(n), then id |
-
-`MinHeap.topK(k)` returns the k best entries without popping them. It walks the heap with a small auxiliary heap in O(k log k), and the Open List panel uses it.
-
-### DLS / IDDLS detail
-
-Pure tree-search DLS revisits states along every path, which grows exponentially. This implementation keeps, per iteration, the **shallowest depth** at which each state was reached. A state is pushed again only if it is reached at a strictly smaller depth. That removes cycles and redundant paths without losing any goal within the limit, so IDDLS still returns a shortest solution.
+`MinHeap.topK(k)` returns the k best frontier entries without popping them. It walks the heap with a small auxiliary heap in O(k log k), and the Open List panel uses it.
 
 ## Trace and playback
 
 ```
-EP.solveForVisualisation(key, options)
+EP.solveForVisualisation('gbfs', options)
  ├─ traced run   → result.steps[]   (one snapshot per expansion, capped at 3,000 + final step)
  └─ untraced run → result.timeMs    (fast runs repeated ~30 ms and averaged)
 
 solver.js frames = [ ...steps.map(search), ...path.map(solution) ]
 ```
 
-A snapshot holds the current node (with parent id and state), the generated successors with their status (`added`, `explored`, `in-frontier`, `replaced`), the first 12 frontier entries in pop order, the 12 most recently explored states, sizes, counters and the depth limit.
+A snapshot holds the current node (with parent id and state), the generated successors with their status (`added`, `explored`, `in-frontier`), the first 12 frontier entries in pop order, the 12 most recently explored states, sizes and counters.
 
 The solver's controls only move an index through `frames`:
 
@@ -84,6 +71,10 @@ The solver's controls only move an index through `frames`:
 | Skip | Jump to the start of the solution, then to the end |
 | Reset | Clear the result and show the initial state |
 | Speed | 1–10, mapped to 1400 ms … 12 ms per frame; the tile animation duration follows |
+
+## Heuristic comparison (`js/pages/compare.js`)
+
+GBFS runs with Manhattan Distance and with Misplaced Tiles on the same puzzle (table and charts), then on a batch of fully random solvable puzzles. The batch reports averages, maxima and how often each heuristic needed fewer expansions. The work is split into small chunks so the page stays responsive.
 
 ## Animation
 
@@ -101,4 +92,12 @@ The solver's controls only move an index through `frames`:
 
 ## Testing
 
-`node tests/run-tests.js` loads the same browser files in Node and checks the puzzle model, the heuristics (h₁ = 4, h₂ = 5 on the assignment example), the heap, path legality for every algorithm, optimal-length agreement (BFS = UCS = IDDLS = A*) on 25 random puzzles, DLS cutoff behaviour, and that GBFS always expands the minimum-h frontier node.
+`node tests/run-tests.js` loads the same browser files in Node. It checks the puzzle model and input validation, the heuristics (h₁ = 4, h₂ = 5 on the assignment example; admissible; h₁ ≤ h₂), the heap, and GBFS itself:
+- every expansion pops the minimum-h frontier node,
+- f(n) = h(n),
+- legal paths on 40 random puzzles,
+- never shorter than the true optimum,
+- the known 63-vs-23-move non-optimal case,
+- counters, trace capping, and identical results whether tracing is on or off.
+
+A small BFS inside the test file serves only as a reference for optimal path lengths.

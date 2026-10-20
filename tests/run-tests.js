@@ -1,5 +1,9 @@
 /*
- * Algorithm test-suite (no dependencies).  Run with:  node tests/run-tests.js
+ * Test-suite for the 8-puzzle model, heuristics, priority queue and Greedy Best-First Search.
+ * No dependencies. Run with:  node tests/run-tests.js
+ *
+ * A tiny breadth-first search is defined below as a TEST ORACLE only (to know the
+ * true shortest solution length). It is not part of the application.
  */
 'use strict';
 const path = require('path');
@@ -10,10 +14,6 @@ const path = require('path');
   'js/core/heuristics.js',
   'js/core/priority-queue.js',
   'js/core/search-context.js',
-  'js/algorithms/bfs.js',
-  'js/algorithms/dfs.js',
-  'js/algorithms/dls.js',
-  'js/algorithms/best-first.js',
   'js/algorithms/gbfs.js',
   'js/algorithms/registry.js',
 ].forEach((f) => require(path.join(__dirname, '..', f)));
@@ -44,8 +44,30 @@ function assertValidPath(result, start, goal) {
   assert(p[p.length - 1].state === goal, 'path must end at the goal state');
   for (let i = 1; i < p.length; i++) {
     assert(P.applyAction(p[i - 1].state, p[i].action) === p[i].state, `illegal move at step ${i}`);
+    assert(p[i].g === i, `g(n) must equal the number of moves at step ${i}`);
   }
   assert(result.moves === p.length - 1, 'moves must equal path length - 1');
+}
+
+/** Test oracle: length of the shortest solution (plain BFS). */
+function optimalMoves(start, goal) {
+  if (start === goal) return 0;
+  const seen = new Set([start]);
+  let layer = [start];
+  for (let d = 1; layer.length; d++) {
+    const next = [];
+    for (const s of layer) {
+      for (const n of P.successors(s)) {
+        if (n.state === goal) return d;
+        if (!seen.has(n.state)) {
+          seen.add(n.state);
+          next.push(n.state);
+        }
+      }
+    }
+    layer = next;
+  }
+  return null;
 }
 
 // Deterministic RNG so failures are reproducible
@@ -68,6 +90,12 @@ test('parseState accepts several formats', () => {
   assert(!P.parseState('2 8 3 1 6 4 7 7 5').ok, 'duplicate tile must be rejected');
   assert(!P.parseState('1 2 3').ok, 'too few cells must be rejected');
 });
+test('input validation messages', () => {
+  assert(/Missing|blank|more than once/.test(P.fromCells(['1', '2', '3', '4', '5', '6', '7', '', '']).error), 'two blanks');
+  assert(/not allowed/.test(P.fromCells(['1', '2', '3', '4', '5', '6', '7', '9', '']).error), 'digit 9');
+  assert(P.fromCells(['1', '2', '3', '8', '', '4', '7', '6', '5']).state === GOAL, 'empty cell = blank');
+  assert(P.parseState('1 2 3 8 0 4 7 6 5').state === GOAL, '0 = blank');
+});
 test('solvability by inversion parity', () => {
   assert(P.isSolvable(START, GOAL));
   assert(!P.isSolvable('123456870', '123456780'), 'swapping two tiles makes it unsolvable');
@@ -86,6 +114,16 @@ test('both heuristics are 0 at the goal', () => {
   assert(EP.createHeuristic('misplaced', GOAL)(GOAL) === 0);
   assert(EP.createHeuristic('manhattan', GOAL)(GOAL) === 0);
 });
+test('both heuristics are admissible and h1 <= h2 (40 random states)', () => {
+  const r = rng(5);
+  const h1 = EP.createHeuristic('misplaced', GOAL);
+  const h2 = EP.createHeuristic('manhattan', GOAL);
+  for (let i = 0; i < 40; i++) {
+    const s = P.randomPuzzle(GOAL, 'random', r);
+    const opt = optimalMoves(s, GOAL);
+    assert(h1(s) <= h2(s) && h2(s) <= opt, `h1=${h1(s)} h2=${h2(s)} opt=${opt} for ${s}`);
+  }
+});
 
 console.log('Priority queue');
 test('MinHeap pops in order and topK matches', () => {
@@ -101,126 +139,91 @@ test('MinHeap pops in order and topK matches', () => {
   assert(JSON.stringify(out) === JSON.stringify(sorted), 'pop order');
 });
 
-console.log('Algorithms on the assignment example (optimal = 5 moves)');
-const base = { start: START, goal: GOAL };
-for (const key of EP.ALGORITHM_ORDER) {
-  for (const heuristic of EP.algorithms[key].informed ? ['manhattan', 'misplaced'] : [null]) {
-    test(`${EP.algorithms[key].short}${heuristic ? ` (${heuristic})` : ''} finds a valid solution`, () => {
-      const r = EP.solve(key, Object.assign({}, base, { heuristic, depthLimit: 10 }));
-      assert(r.found, `status = ${r.status}`);
-      assertValidPath(r, START, GOAL);
-      if (['bfs', 'iddls', 'ucs', 'astar'].includes(key)) assert(r.moves === 5, `expected 5 moves, got ${r.moves}`);
-    });
-  }
+console.log('Greedy Best-First Search');
+for (const heuristic of ['manhattan', 'misplaced']) {
+  test(`GBFS (${heuristic}) solves the assignment example with a valid path`, () => {
+    const r = EP.solve('gbfs', { start: START, goal: GOAL, heuristic });
+    assert(r.found, `status = ${r.status}`);
+    assertValidPath(r, START, GOAL);
+    assert(r.moves >= 5, 'cannot beat the optimal 5 moves');
+  });
 }
-test('DLS with limit 4 (< 5) reports cutoff', () => {
-  const r = EP.solve('dls', Object.assign({}, base, { depthLimit: 4 }));
-  assert(!r.found && r.status === 'cutoff', r.status);
-  assert(r.maxDepth <= 4, `maxDepth ${r.maxDepth}`);
+test('GBFS + Manhattan on the example: 5 moves, 5 expansions, 16 generated', () => {
+  const r = EP.solve('gbfs', { start: START, goal: GOAL, heuristic: 'manhattan' });
+  assert(r.moves === 5 && r.expanded === 5 && r.generated === 16, `${r.moves}/${r.expanded}/${r.generated}`);
 });
-test('IDDLS reports the iteration count', () => {
-  const r = EP.solve('iddls', base);
-  assert(r.iterations === 6 && r.finalLimit === 5, `${r.iterations} / ${r.finalLimit}`);
-});
-test('GBFS trace: every expanded node is the frontier minimum by h', () => {
-  const r = EP.solve('gbfs', Object.assign({}, base, { trace: true, heuristic: 'manhattan' }));
-  for (let i = 1; i < r.steps.length; i++) {
-    const prev = r.steps[i - 1];
-    const minH = Math.min(...prev.frontier.map((n) => n.h));
-    assert(r.steps[i].current.h === minH, `step ${i}: expanded h=${r.steps[i].current.h}, frontier min=${minH}`);
+test('Every expanded node is the frontier minimum by h (both heuristics)', () => {
+  for (const heuristic of ['manhattan', 'misplaced']) {
+    const start = P.randomPuzzle(GOAL, 'random', rng(17));
+    const r = EP.solve('gbfs', { start, goal: GOAL, heuristic, trace: true });
+    for (let i = 1; i < r.steps.length; i++) {
+      const prev = r.steps[i - 1];
+      const minH = Math.min(...prev.frontier.map((n) => n.h));
+      assert(r.steps[i].current.h === minH, `${heuristic} step ${i}: expanded h=${r.steps[i].current.h}, frontier min=${minH}`);
+    }
+    assert(r.steps[r.steps.length - 1].kind === 'goal');
   }
-  assert(r.steps[r.steps.length - 1].kind === 'goal');
+});
+test('f(n) = h(n) for every recorded node', () => {
+  const r = EP.solve('gbfs', { start: P.randomPuzzle(GOAL, 'medium', rng(23)), goal: GOAL, trace: true });
+  for (const s of r.steps) {
+    assert(s.current.f === s.current.h, 'current');
+    s.successors.forEach((x) => assert(x.f === x.h, 'successor'));
+    s.frontier.forEach((x) => assert(x.f === x.h, 'frontier'));
+  }
 });
 test('Starting at the goal needs 0 moves', () => {
-  for (const key of EP.ALGORITHM_ORDER) {
-    const r = EP.solve(key, { start: GOAL, goal: GOAL, depthLimit: 3 });
-    assert(r.found && r.moves === 0, key);
-  }
+  const r = EP.solve('gbfs', { start: GOAL, goal: GOAL });
+  assert(r.found && r.moves === 0 && r.expanded === 0, `${r.moves} / ${r.expanded}`);
 });
-
-console.log('Random puzzles: optimal algorithms agree, all paths valid');
-test('BFS = UCS = IDDLS = A*(h1) = A*(h2) on 25 random puzzles; DFS/GBFS valid', () => {
+test('Complete: solves 40 random puzzles with valid paths, never shorter than optimal', () => {
   const r = rng(42);
-  for (let i = 0; i < 25; i++) {
-    const start = P.randomPuzzle(GOAL, i < 15 ? 'medium' : 'random', r);
-    const opts = { start, goal: GOAL };
-    const bfs = EP.solve('bfs', opts);
-    assertValidPath(bfs, start, GOAL);
-    for (const [key, h] of [['ucs'], ['iddls'], ['astar', 'manhattan'], ['astar', 'misplaced']]) {
-      const x = EP.solve(key, Object.assign({ heuristic: h }, opts));
-      assert(x.found && x.moves === bfs.moves, `${key}/${h} ${x.moves} vs BFS ${bfs.moves} for ${start}`);
-      assertValidPath(x, start, GOAL);
-    }
-    for (const [key, h] of [['dfs'], ['gbfs', 'manhattan'], ['gbfs', 'misplaced']]) {
-      const x = EP.solve(key, Object.assign({ heuristic: h }, opts));
-      assert(x.found && x.moves >= bfs.moves, `${key} ${x.moves}`);
-      assertValidPath(x, start, GOAL);
-    }
-  }
-});
-
-console.log('Boundary cases and invariants');
-test('DLS finds a solution iff limit >= optimal depth (20 random puzzles)', () => {
-  const r = rng(99);
-  for (let i = 0; i < 20; i++) {
-    const start = P.randomPuzzle(GOAL, 'easy', r);
-    const d = EP.solve('bfs', { start, goal: GOAL }).moves;
-    const at = EP.solve('dls', { start, goal: GOAL, depthLimit: d });
-    const below = EP.solve('dls', { start, goal: GOAL, depthLimit: d - 1 });
-    assert(at.found && at.moves <= d, `limit ${d} should find, got ${at.status}`);
-    assertValidPath(at, start, GOAL);
-    assert(!below.found && below.status === 'cutoff', `limit ${d - 1} should cut off, got ${below.status}`);
-  }
-});
-test('IDDLS with maxDepth below the optimal depth reports cutoff', () => {
-  const r = EP.solve('iddls', { start: START, goal: GOAL, maxDepth: 3 });
-  assert(!r.found && r.status === 'cutoff' && r.finalLimit === 3, `${r.status} ${r.finalLimit}`);
-});
-test('Both heuristics are admissible (h <= optimal cost) on 40 random states', () => {
-  const r = rng(5);
-  const h1 = EP.createHeuristic('misplaced', GOAL);
-  const h2 = EP.createHeuristic('manhattan', GOAL);
+  let longer = 0;
   for (let i = 0; i < 40; i++) {
-    const s = P.randomPuzzle(GOAL, 'random', r);
-    const opt = EP.solve('astar', { start: s, goal: GOAL, heuristic: 'manhattan' }).moves;
-    assert(h1(s) <= h2(s) && h2(s) <= opt, `h1=${h1(s)} h2=${h2(s)} opt=${opt} for ${s}`);
+    const start = P.randomPuzzle(GOAL, i < 15 ? 'medium' : 'random', r);
+    const opt = optimalMoves(start, GOAL);
+    for (const heuristic of ['manhattan', 'misplaced']) {
+      const x = EP.solve('gbfs', { start, goal: GOAL, heuristic });
+      assert(x.found, `${heuristic} failed on ${start}`);
+      assertValidPath(x, start, GOAL);
+      assert(x.moves >= opt, `${heuristic}: ${x.moves} < optimal ${opt}`);
+      if (x.moves > opt) longer++;
+    }
   }
+  assert(longer > 0, 'GBFS should be non-optimal on at least one random puzzle');
 });
-test('A* expands nodes in non-decreasing f order (consistent heuristic)', () => {
-  const start = P.randomPuzzle(GOAL, 'random', rng(11));
-  const res = EP.solve('astar', { start, goal: GOAL, heuristic: 'manhattan', trace: true });
-  for (let i = 1; i < res.steps.length; i++) {
-    assert(res.steps[i].current.f >= res.steps[i - 1].current.f, `f decreased at step ${i}`);
-  }
+test('Known non-optimal case: 702645381 → GBFS (Manhattan) 63 moves, optimal 23', () => {
+  const r = EP.solve('gbfs', { start: '702645381', goal: GOAL, heuristic: 'manhattan' });
+  assert(r.moves === 63 && optimalMoves('702645381', GOAL) === 23, `${r.moves}`);
 });
-test('Counters are consistent for every algorithm', () => {
-  const start = P.randomPuzzle(GOAL, 'medium', rng(21));
-  for (const key of EP.ALGORITHM_ORDER) {
-    const x = EP.solve(key, { start, goal: GOAL, heuristic: 'manhattan', depthLimit: 12 });
-    assert(x.generated >= x.expanded, `${key}: generated < expanded`);
-    assert(x.peakNodes > 0 && x.memoryBytes === x.peakNodes * EP.BYTES_PER_NODE, `${key}: memory`);
-    if (x.found) assert(x.cost === x.moves && x.maxDepth >= x.moves, `${key}: cost/depth`);
-  }
+test('Counters are consistent', () => {
+  const x = EP.solve('gbfs', { start: P.randomPuzzle(GOAL, 'random', rng(21)), goal: GOAL });
+  assert(x.generated >= x.expanded, 'generated < expanded');
+  assert(x.peakNodes > 0 && x.memoryBytes === x.peakNodes * EP.BYTES_PER_NODE, 'memory');
+  assert(x.cost === x.moves && x.maxDepth >= x.moves, 'cost/depth');
 });
 test('Trace is capped but always ends with the final step; stats cover the full run', () => {
-  const x = EP.solve('dfs', { start: START, goal: GOAL, trace: true, maxTraceSteps: 50 });
+  const x = EP.solve('gbfs', { start: '702645381', goal: GOAL, heuristic: 'misplaced', trace: true, maxTraceSteps: 50 });
   assert(x.truncated && x.steps.length === 51, `steps ${x.steps.length}`);
   assert(x.steps[50].kind === 'goal' && x.expanded > 50, 'final step / full stats');
 });
 test('Untraced runs record no steps, and traced/untraced give identical results', () => {
-  const start = P.randomPuzzle(GOAL, 'medium', rng(31));
-  for (const key of EP.ALGORITHM_ORDER) {
-    const a = EP.solve(key, { start, goal: GOAL, heuristic: 'misplaced', depthLimit: 20 });
-    const b = EP.solve(key, { start, goal: GOAL, heuristic: 'misplaced', depthLimit: 20, trace: true });
-    assert(a.steps.length === 0, `${key} untraced recorded steps`);
-    assert(a.moves === b.moves && a.expanded === b.expanded && a.generated === b.generated, `${key} traced differs`);
+  const start = P.randomPuzzle(GOAL, 'random', rng(31));
+  for (const heuristic of ['manhattan', 'misplaced']) {
+    const a = EP.solve('gbfs', { start, goal: GOAL, heuristic });
+    const b = EP.solve('gbfs', { start, goal: GOAL, heuristic, trace: true });
+    assert(a.steps.length === 0, 'untraced recorded steps');
+    assert(a.moves === b.moves && a.expanded === b.expanded && a.generated === b.generated, 'traced differs');
   }
 });
-test('Input validation messages', () => {
-  assert(/Missing|blank|more than once/.test(P.fromCells(['1', '2', '3', '4', '5', '6', '7', '', '']).error), 'two blanks');
-  assert(/not allowed/.test(P.fromCells(['1', '2', '3', '4', '5', '6', '7', '9', '']).error), 'digit 9');
-  assert(P.fromCells(['1', '2', '3', '8', '', '4', '7', '6', '5']).state === GOAL, 'empty cell = blank');
-  assert(P.parseState('1 2 3 8 0 4 7 6 5').state === GOAL, '0 = blank');
+test('Unknown algorithm is rejected', () => {
+  let threw = false;
+  try {
+    EP.solve('bfs', { start: START, goal: GOAL });
+  } catch (e) {
+    threw = true;
+  }
+  assert(threw && EP.ALGORITHM_ORDER.length === 1 && EP.ALGORITHM_ORDER[0] === 'gbfs');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

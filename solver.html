@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Solver · 8-Puzzle AI Visualizer</title>
-  <meta name="description" content="Solve the 8-puzzle step by step with BFS, DFS, DLS, IDDLS, UCS, Greedy Best-First Search or A*.">
+  <meta name="description" content="Solve the 8-puzzle step by step with Greedy Best-First Search.">
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
   <script>(function(){try{var t=localStorage.getItem('ep.theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-bs-theme',t);}catch(e){}})();</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
@@ -18,7 +18,7 @@
     <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
       <div>
         <h1 class="h3 fw-bold mb-1">Puzzle Solver</h1>
-        <p class="text-body-secondary mb-0 small">Set up a puzzle, pick an algorithm, then press <b>Run</b> to watch the search and the solution.</p>
+        <p class="text-body-secondary mb-0 small">Set up a puzzle, pick a heuristic, then press <b>Run</b> to watch Greedy Best-First Search and the solution.</p>
       </div>
       <span class="small text-body-secondary kbd-hint d-none d-md-inline">Shortcuts: <kbd>Space</kbd> pause / resume · <kbd>←</kbd> <kbd>→</kbd> step</span>
     </div>
@@ -33,14 +33,14 @@
         <div id="guideBody">
           <div class="row g-3 small">
             <div class="col-md-4"><div class="guide-step"><span class="num">1</span><div><b>Set up the puzzle</b><br>Type the initial and goal states in the grids (use <kbd>_</kbd> or leave a cell empty for the blank), or click <b>Generate Random Puzzle</b>.</div></div></div>
-            <div class="col-md-4"><div class="guide-step"><span class="num">2</span><div><b>Choose an algorithm</b><br>GBFS (assigned) is selected. For GBFS / A* pick a heuristic; for DLS set the depth limit.</div></div></div>
+            <div class="col-md-4"><div class="guide-step"><span class="num">2</span><div><b>Choose the heuristic</b><br>The solver uses Greedy Best-First Search. Pick <b>Manhattan Distance</b> or <b>Misplaced Tiles</b> as h(n).</div></div></div>
             <div class="col-md-4"><div class="guide-step"><span class="num">3</span><div><b>Run and explore</b><br>Press <b>Run</b>. Use <b>Pause</b>, <b>Next</b> / <b>Prev</b> to study each expansion, <b>Skip</b> to jump to the solution.</div></div></div>
           </div>
           <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
             <span class="small text-body-secondary">Quick start:</span>
             <a class="btn btn-sm btn-outline-secondary" href="solver.html?algo=gbfs&h=manhattan&start=283164705&goal=123804765&speed=5&autorun=1"><i class="bi bi-lightning-charge"></i> Assignment example with GBFS</a>
             <a class="btn btn-sm btn-outline-secondary" href="solver.html?algo=gbfs&h=manhattan&start=702645381&goal=123804765&speed=8&autorun=1"><i class="bi bi-exclamation-diamond"></i> A case where GBFS is not optimal</a>
-            <a class="btn btn-sm btn-outline-secondary" href="solver.html?algo=astar&h=manhattan&start=702645381&goal=123804765&speed=8&autorun=1"><i class="bi bi-star"></i> Same puzzle with A*</a>
+            <a class="btn btn-sm btn-outline-secondary" href="solver.html?algo=gbfs&h=misplaced&start=702645381&goal=123804765&speed=8&autorun=1"><i class="bi bi-arrow-left-right"></i> Same puzzle with Misplaced Tiles</a>
           </div>
         </div>
       </div>
@@ -57,20 +57,14 @@
         <div class="card">
           <div class="card-header"><i class="bi bi-cpu"></i> Algorithm</div>
           <div class="card-body">
-            <label for="algoSelect" class="form-label small fw-semibold">Search algorithm</label>
-            <select id="algoSelect" class="form-select mb-3">
-              <optgroup label="Uninformed search">
-                <option value="bfs">Breadth-First Search (BFS)</option>
-                <option value="dfs">Depth-First Search (DFS)</option>
-                <option value="dls">Depth-Limited Search (DLS)</option>
-                <option value="iddls">Iterative Deepening DLS (IDDLS)</option>
-                <option value="ucs">Uniform-Cost Search (UCS)</option>
-              </optgroup>
-              <optgroup label="Informed search">
-                <option value="gbfs" selected>★ Greedy Best-First Search (GBFS), assigned</option>
-                <option value="astar">A* Search</option>
-              </optgroup>
-            </select>
+            <div class="form-label small fw-semibold mb-1">Search algorithm</div>
+            <div class="d-flex align-items-center gap-2 mb-3 p-2 rounded-3 bg-accent-soft">
+              <i class="bi bi-stars text-accent fs-5"></i>
+              <div>
+                <div class="fw-semibold">Greedy Best-First Search (GBFS)</div>
+                <div class="small text-body-secondary">Informed search · f(n) = h(n)</div>
+              </div>
+            </div>
 
             <div id="heuristicGroup" class="mb-3">
               <div class="form-label small fw-semibold">Heuristic h(n)</div>
@@ -82,18 +76,6 @@
                 <input class="form-check-input" type="radio" name="heuristic" id="hMisplaced" value="misplaced">
                 <label class="form-check-label" for="hMisplaced">Misplaced Tiles</label>
               </div>
-            </div>
-
-            <div id="depthLimitGroup" class="mb-3 d-none">
-              <label for="depthLimit" class="form-label small fw-semibold">Depth limit (ℓ)</label>
-              <input type="number" id="depthLimit" class="form-control" min="0" max="60" value="10">
-              <div class="form-text">Nodes at depth ℓ are not expanded.</div>
-            </div>
-
-            <div id="maxDepthGroup" class="mb-3 d-none">
-              <label for="maxDepth" class="form-label small fw-semibold">Maximum depth for iterative deepening</label>
-              <input type="number" id="maxDepth" class="form-control" min="0" max="60" value="31">
-              <div class="form-text">Every solvable 8-puzzle needs at most 31 moves.</div>
             </div>
 
             <div id="algoBlurb" class="small text-body-secondary border-top pt-3"></div>
@@ -245,10 +227,6 @@
   <script src="js/core/priority-queue.js"></script>
   <script src="js/core/search-context.js"></script>
   <script src="js/algorithms/gbfs.js"></script>
-  <script src="js/algorithms/bfs.js"></script>
-  <script src="js/algorithms/dfs.js"></script>
-  <script src="js/algorithms/dls.js"></script>
-  <script src="js/algorithms/best-first.js"></script>
   <script src="js/algorithms/registry.js"></script>
   <script src="js/data/algorithm-info.js"></script>
   <script src="js/ui/board.js"></script>

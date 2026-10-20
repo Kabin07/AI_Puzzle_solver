@@ -38,10 +38,8 @@
 
   function settings() {
     return {
-      algorithm: els.algo.value,
+      algorithm: EP.config.assignedAlgorithm, // Greedy Best-First Search
       heuristic: document.querySelector('input[name="heuristic"]:checked').value,
-      depthLimit: clampInt(els.depthLimit.value, 0, 60, 10),
-      maxDepth: clampInt(els.maxDepth.value, 0, 60, 31),
     };
   }
 
@@ -58,24 +56,18 @@
   }
 
   // ------------------------------------------------------- algorithm panel
-  function evalLabel(key) {
-    return { gbfs: 'f(n) = h(n)', astar: 'f(n) = g(n) + h(n)', ucs: 'f(n) = g(n)' }[key] || EP.algorithms[key].frontierKind;
-  }
+  const EVAL_LABEL = 'f(n) = h(n)';
 
   function updateAlgoUI() {
-    const key = els.algo.value;
-    const algo = EP.algorithms[key];
-    const info = EP.algorithmInfo[key];
-    els.heuristicGroup.classList.toggle('d-none', !algo.informed);
-    els.depthLimitGroup.classList.toggle('d-none', key !== 'dls');
-    els.maxDepthGroup.classList.toggle('d-none', key !== 'iddls');
-    els.evalBadge.textContent = evalLabel(key);
+    const algo = EP.algorithms.gbfs;
+    const info = EP.algorithmInfo.gbfs;
+    els.evalBadge.textContent = EVAL_LABEL;
     els.blurb.innerHTML = `
-      ${key === EP.config.assignedAlgorithm ? '<span class="badge badge-assigned mb-2">Assigned algorithm</span><br>' : ''}
+      <span class="badge badge-assigned mb-2">Assigned algorithm</span><br>
       ${esc(info.summary)}
       <div class="mt-2"><b>Frontier:</b> ${esc(algo.frontierKind)}<br>
       <b>Complete:</b> ${info.complete} · <b>Optimal:</b> ${info.optimal}</div>
-      <a class="d-inline-block mt-2 text-accent fw-semibold" href="algorithms.html#${key}">How ${esc(algo.short)} works →</a>`;
+      <a class="d-inline-block mt-2 text-accent fw-semibold" href="algorithms.html#gbfs">How GBFS works →</a>`;
   }
 
   // ---------------------------------------------------------------- render
@@ -86,20 +78,14 @@
 
   function renderStats(step) {
     const c = step.current;
-    const informed = run.informed;
     const items = [
       stat('Current node', c ? `#${c.id}` : '—', true),
       stat('Parent node', c && c.parentId ? `#${c.parentId}` : c ? 'root' : '—'),
       stat('Search depth', c ? c.depth : '—'),
-      stat('Path cost g(n)', c ? c.g : '—', informed),
+      stat('Path cost g(n)', c ? c.g : '—', true),
+      stat('Heuristic h(n)', c ? c.h : '—', true),
+      stat('Evaluation f(n)', c ? c.f : '—', true, EVAL_LABEL),
     ];
-    if (informed) {
-      items.push(stat('Heuristic h(n)', c ? c.h : '—', true));
-      items.push(stat('Evaluation f(n)', c ? c.f : '—', true, evalLabel(run.algo)));
-    } else if (run.algo === 'ucs') {
-      items.push(stat('Evaluation f(n)', c ? c.f : '—', false, 'f(n) = g(n)'));
-    }
-    if (step.limit != null) items.push(stat('Depth limit ℓ', step.limit));
     items.push(
       stat('Nodes generated', fmt(step.generated)),
       stat('Nodes expanded', fmt(step.expanded)),
@@ -117,7 +103,7 @@
       els.parentNode.innerHTML = '<span>—</span>';
       return;
     }
-    const hf = run.informed ? `h = <b>${c.h}</b> · f = <b>${c.f}</b>` : run.algo === 'ucs' ? `f = <b>${c.f}</b>` : '';
+    const hf = `h = <b>${c.h}</b> · f = <b>${c.f}</b>`;
     els.currentNode.innerHTML = nodeCard(c.state, [`<b>Node #${c.id}</b>`, `depth ${c.depth} · g = <b>${c.g}</b>`, hf], {
       parent: c.parentState,
     });
@@ -132,34 +118,22 @@
     added: ['success', 'Added to frontier'],
     explored: ['secondary', 'Already explored'],
     'in-frontier': ['warning', 'Already in frontier'],
-    replaced: ['info', 'Cheaper path: replaced'],
   };
 
   function renderSuccessors(step) {
     const list = step.successors;
     if (!list.length) {
-      const msg =
-        step.kind === 'goal'
-          ? 'Goal state selected: no expansion needed.'
-          : step.kind === 'cutoff'
-            ? 'Node is at the depth limit, so it is not expanded.'
-            : step.kind === 'iteration'
-              ? 'New iteration: the search restarts from the root.'
-              : step.note || '—';
+      const msg = step.kind === 'goal' ? 'Goal state selected: no expansion needed.' : step.note || '—';
       els.successors.innerHTML = `<span>${esc(msg)}</span>`;
       els.succCount.textContent = '';
       return;
     }
     const parent = step.current.state;
-    els.succCount.textContent = `${list.length} generated · ${list.filter((s) => s.status === 'added' || s.status === 'replaced').length} added`;
+    els.succCount.textContent = `${list.length} generated · ${list.filter((s) => s.status === 'added').length} added`;
     els.successors.innerHTML = list
       .map((s) => {
         const [color, label] = STATUS[s.status];
-        const nums = run.informed
-          ? `g=${s.g} · <b>h=${s.h}</b> · f=${s.f}`
-          : run.algo === 'ucs'
-            ? `g=${s.g} · f=${s.f}`
-            : `depth ${s.depth} · g=${s.g}`;
+        const nums = `g=${s.g} · <b>h=${s.h}</b> · f=${s.f}`;
         return `<div class="succ-card status-${s.status}">
           ${ui.miniBoard(s.state, { parent, goal: puzzle.goal })}
           <div class="succ-meta"><b>#${s.id}</b> · Blank ${actionArrow(s.action)} ${s.action}<br>${nums}<br>
@@ -169,18 +143,14 @@
   }
 
   function renderLists(step) {
-    const kind = EP.algorithms[run.algo].frontierKind;
+    const kind = EP.algorithms.gbfs.frontierKind;
     els.frontierTitle.textContent = `${fmt(step.frontierSize)} nodes · ${kind}${step.frontierSize > step.frontier.length ? ` · top ${step.frontier.length}` : ''}`;
     if (!step.frontier.length) {
       els.frontierList.innerHTML = '<span class="small text-body-secondary">Frontier is empty.</span>';
     } else {
       els.frontierList.innerHTML = step.frontier
         .map((n, i) => {
-          const vals = run.informed
-            ? `<span>g=${n.g}</span><span class="fw-bold">h=${n.h}</span><span>f=${n.f}</span>`
-            : run.algo === 'ucs'
-              ? `<span>g=${n.g}</span><span class="fw-bold">f=${n.f}</span>`
-              : `<span>depth ${n.depth}</span><span>g=${n.g}</span>`;
+          const vals = `<span>g=${n.g}</span><span class="fw-bold">h=${n.h}</span><span>f=${n.f}</span>`;
           return `<div class="list-row${i === 0 ? ' next-up' : ''}">
             <span class="rank">${i + 1}</span>${ui.miniBoard(n.state, { size: 'sm', goal: puzzle.goal })}
             <span class="text-body-secondary">#${n.id}</span>
@@ -198,7 +168,7 @@
   function renderChart(stepIndex) {
     ui.lineChart(els.chart, run.chartValues, {
       upto: stepIndex,
-      yLabel: run.informed ? 'h(n) of expanded node' : 'Depth of expanded node',
+      yLabel: 'h(n) of expanded node',
     });
   }
 
@@ -207,7 +177,7 @@
     boards.current.setState(c ? c.state : puzzle.start);
     els.currentTitle.textContent = 'Current state (node being expanded)';
     let caption;
-    if (step.kind === 'expand') caption = `Expanding node #${c.id} at depth ${c.depth}${run.informed ? ` · h(n) = ${c.h}` : ''}`;
+    if (step.kind === 'expand') caption = `Expanding node #${c.id} at depth ${c.depth} · h(n) = ${c.h}`;
     else if (step.kind === 'goal') caption = `✓ Goal test passed on node #${c.id}. ${step.note}`;
     else caption = step.note;
     els.caption.textContent = caption;
@@ -226,8 +196,7 @@
     els.currentTitle.textContent = `Solution path · step ${i} of ${run.result.moves}`;
     const prev = i > 0 ? path[i - 1].state : null;
     const tile = prev ? node.state[prev.indexOf('0')] : null;
-    const h = run.informed ? ` · h(n) = ${node.h}` : '';
-    els.caption.textContent = `Step ${i}: ${P.describeMove(node.action, tile)} · g(n) = ${node.g}${h}`;
+    els.caption.textContent = `Step ${i}: ${P.describeMove(node.action, tile)} · g(n) = ${node.g} · h(n) = ${node.h}`;
     setActivePathStep(i);
   }
 
@@ -269,8 +238,7 @@
 
   function renderSummary() {
     const r = run.result;
-    const algo = EP.algorithms[run.algo];
-    const optimal = run.optimal;
+    const algo = EP.algorithms.gbfs;
     const items = [
       stat('Result', r.found ? '<span class="text-success">Solution found</span>' : '<span class="text-danger">Not found</span>', true),
       stat('Total moves', fmt(r.moves), true),
@@ -282,19 +250,13 @@
       stat('Memory (approx.)', `${EP.formatBytes(r.memoryBytes)}`, false, `Peak ${r.peakNodes.toLocaleString()} nodes held × ~${EP.BYTES_PER_NODE} B/node`),
     ];
     const notes = [];
-    notes.push(`<b>${esc(algo.name)}</b>${algo.informed ? ` with <b>${esc(EP.heuristics[r.heuristic].name)}</b>` : ''}: ${esc(EP.describeStatus(r))}.`);
+    notes.push(`<b>${esc(algo.name)}</b> with <b>${esc(EP.heuristics[r.heuristic].name)}</b>: ${esc(EP.describeStatus(r))}.`);
     notes.push(`Peak memory: <b>${r.peakNodes.toLocaleString()}</b> nodes in frontier + explored (${EP.memoryLabel(r.peakNodes)}).`);
-    if (r.iterations) notes.push(`Iterative deepening ran <b>${r.iterations}</b> iteration(s), final depth limit ${r.finalLimit}.`);
-    if (optimal != null) {
-      if (r.found) {
-        notes.push(
-          r.moves === optimal
-            ? `<span class="text-success"><i class="bi bi-patch-check"></i> This solution is optimal (shortest possible = ${optimal} moves).</span>`
-            : `<span class="text-warning-emphasis"><i class="bi bi-exclamation-diamond"></i> Not optimal: the shortest solution has ${optimal} moves, ${(r.moves - optimal).toLocaleString()} fewer than this one.</span>`
-        );
-      } else if (r.status === 'cutoff' && run.algo === 'dls') {
-        notes.push(`Hint: the shortest solution needs ${optimal} moves. Set the depth limit to at least ${optimal}.`);
-      }
+    if (r.found) {
+      const h0 = r.path[0].h;
+      notes.push(
+        `h(start) = ${h0}. GBFS follows the lowest h(n) and ignores the cost g(n) already paid, so the ${r.moves}-move path it returns is not guaranteed to be the shortest one.`
+      );
     }
     if (r.truncated) {
       notes.push(
@@ -431,12 +393,8 @@
     els.btnRun.disabled = true;
     setTimeout(() => {
       try {
-        const opts = { start: p.start, goal: p.goal, heuristic: s.heuristic, depthLimit: s.depthLimit, maxDepth: s.maxDepth };
+        const opts = { start: p.start, goal: p.goal, heuristic: s.heuristic };
         const result = EP.solveForVisualisation(s.algorithm, opts);
-        const algo = EP.algorithms[s.algorithm];
-        const isOptimalAlgo = ['bfs', 'iddls', 'ucs', 'astar'].includes(s.algorithm);
-        const optimal =
-          result.found && isOptimalAlgo ? result.moves : EP.solve('astar', { start: p.start, goal: p.goal, heuristic: 'manhattan' }).moves;
         const frames = result.steps.map((st) => ({ type: 'search', step: st }));
         const searchCount = frames.length;
         if (result.found) result.path.forEach((_, i) => frames.push({ type: 'solution', i }));
@@ -445,9 +403,7 @@
           frames,
           searchCount,
           algo: s.algorithm,
-          informed: algo.informed,
-          optimal,
-          chartValues: result.steps.map((st) => (st.current ? (algo.informed ? st.current.h : st.current.depth) : null)),
+          chartValues: result.steps.map((st) => (st.current ? st.current.h : null)),
         };
         renderPath();
         show(0);
@@ -478,12 +434,6 @@
   // ------------------------------------------------------------------ init
   document.addEventListener('DOMContentLoaded', () => {
     els = {
-      algo: $('algoSelect'),
-      heuristicGroup: $('heuristicGroup'),
-      depthLimitGroup: $('depthLimitGroup'),
-      maxDepthGroup: $('maxDepthGroup'),
-      depthLimit: $('depthLimit'),
-      maxDepth: $('maxDepth'),
       blurb: $('algoBlurb'),
       evalBadge: $('evalBadge'),
       btnRun: $('btnRun'),
@@ -526,26 +476,20 @@
 
     setup = new ui.PuzzleSetup($('setup'), { onChange: (p) => puzzleChanged(p, false) });
 
-    // URL parameters (handy for demos): ?algo=gbfs&h=manhattan&start=283164705&goal=123804765&speed=6&autorun=1&jump=solution
+    // URL parameters (handy for demos): ?h=manhattan&start=283164705&goal=123804765&speed=6&autorun=1&jump=solution
     const q = new URLSearchParams(location.search);
     if (q.get('start') && q.get('goal')) {
       const s = P.parseState(q.get('start'));
       const g = P.parseState(q.get('goal'));
       if (s.ok && g.ok) setup.set(s.state, g.state, { silent: true });
     }
-    if (q.get('algo') && EP.algorithms[q.get('algo')]) els.algo.value = q.get('algo');
     if (q.get('h') && EP.heuristics[q.get('h')]) document.querySelector(`input[name="heuristic"][value="${q.get('h')}"]`).checked = true;
     if (q.get('speed')) els.speed.value = clampInt(q.get('speed'), 1, 10, 5);
-    if (q.get('limit')) els.depthLimit.value = clampInt(q.get('limit'), 0, 60, 10);
 
     puzzleChanged(setup.read(), false);
     updateAlgoUI();
 
-    els.algo.addEventListener('change', () => {
-      updateAlgoUI();
-      reset();
-    });
-    document.querySelectorAll('input[name="heuristic"], #depthLimit, #maxDepth').forEach((el) => el.addEventListener('change', reset));
+    document.querySelectorAll('input[name="heuristic"]').forEach((el) => el.addEventListener('change', reset));
 
     const syncSpeed = () => {
       els.speedLabel.textContent = `${delay()} ms`;

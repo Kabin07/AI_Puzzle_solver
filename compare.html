@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Comparison · 8-Puzzle AI Visualizer</title>
-  <meta name="description" content="Compare BFS, DFS, DLS, IDDLS, UCS, GBFS and A* on the same 8-puzzle instance.">
+  <title>Heuristic Comparison · 8-Puzzle AI Visualizer</title>
+  <meta name="description" content="Compare Greedy Best-First Search with the Manhattan Distance and Misplaced Tiles heuristics on the same 8-puzzle and on random puzzles.">
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
   <script>(function(){try{var t=localStorage.getItem('ep.theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-bs-theme',t);}catch(e){}})();</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
@@ -16,8 +16,9 @@
 
   <main class="container-xxl py-4">
     <div class="mb-3">
-      <h1 class="h3 fw-bold mb-1">Algorithm Comparison</h1>
-      <p class="text-body-secondary small mb-0">Every algorithm runs on the <b>same puzzle instance</b>. Times are measured without visualisation; very fast searches are repeated and averaged because browser timers are coarse.</p>
+      <h1 class="h3 fw-bold mb-1">Heuristic Comparison</h1>
+      <p class="text-body-secondary small mb-0">Greedy Best-First Search runs with <b>Manhattan Distance</b> and with <b>Misplaced Tiles</b> on the
+        <b>same puzzle instance</b>, then on a batch of random puzzles. Times are measured without visualisation; very fast searches are repeated and averaged because browser timers are coarse.</p>
     </div>
 
     <div class="card mb-4 guide-card">
@@ -29,8 +30,8 @@
         <div id="guideBody">
           <div class="row g-3 small">
             <div class="col-md-4"><div class="guide-step"><span class="num">1</span><div><b>Pick the puzzle</b><br>The puzzle you used in the Solver is loaded automatically. Edit it or generate a new one.</div></div></div>
-            <div class="col-md-4"><div class="guide-step"><span class="num">2</span><div><b>Set the options</b><br>Choose the heuristic for GBFS / A* and the depth limits for DLS and IDDLS.</div></div></div>
-            <div class="col-md-4"><div class="guide-step"><span class="num">3</span><div><b>Run Comparison</b><br>Read the table, the four charts and the auto-generated observations. Download the table as CSV if needed.</div></div></div>
+            <div class="col-md-4"><div class="guide-step"><span class="num">2</span><div><b>Choose the batch size</b><br>How many random puzzles to average over (in addition to your puzzle).</div></div></div>
+            <div class="col-md-4"><div class="guide-step"><span class="num">3</span><div><b>Run Comparison</b><br>Read both tables, the four charts and the auto-generated observations. Download the results as CSV if needed.</div></div></div>
           </div>
           <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
             <span class="small text-body-secondary">Quick start:</span>
@@ -50,31 +51,15 @@
         <div class="card">
           <div class="card-header"><i class="bi bi-sliders"></i> Options</div>
           <div class="card-body">
-            <label for="heuristic" class="form-label small fw-semibold">Heuristic for GBFS and A*</label>
-            <select id="heuristic" class="form-select form-select-sm mb-2">
-              <option value="manhattan" selected>Manhattan Distance</option>
-              <option value="misplaced">Misplaced Tiles</option>
+            <label for="batchSize" class="form-label small fw-semibold">Random puzzles in the batch test</label>
+            <select id="batchSize" class="form-select form-select-sm mb-3">
+              <option value="0">None (this puzzle only)</option>
+              <option value="20">20 puzzles</option>
+              <option value="50" selected>50 puzzles</option>
+              <option value="100">100 puzzles</option>
             </select>
-            <div class="form-check mb-3">
-              <input class="form-check-input" type="checkbox" id="bothHeuristics" checked>
-              <label class="form-check-label small" for="bothHeuristics">Also run GBFS and A* with the other heuristic</label>
-            </div>
-            <div class="form-check mb-3">
-              <input class="form-check-input" type="checkbox" id="includeUcs" checked>
-              <label class="form-check-label small" for="includeUcs">Include Uniform-Cost Search</label>
-            </div>
-            <div class="row g-2 mb-3">
-              <div class="col-6">
-                <label for="depthLimit" class="form-label small fw-semibold">DLS limit ℓ</label>
-                <input type="number" id="depthLimit" class="form-control form-control-sm" min="0" max="60" value="10">
-              </div>
-              <div class="col-6">
-                <label for="maxDepth" class="form-label small fw-semibold">IDDLS max depth</label>
-                <input type="number" id="maxDepth" class="form-control form-control-sm" min="0" max="60" value="31">
-              </div>
-            </div>
             <button id="btnCompare" class="btn btn-accent w-100"><i class="bi bi-play-fill"></i> Run Comparison</button>
-            <button id="btnCsv" class="btn btn-outline-secondary btn-sm w-100 mt-2" disabled><i class="bi bi-download"></i> Download table (CSV)</button>
+            <button id="btnCsv" class="btn btn-outline-secondary btn-sm w-100 mt-2" disabled><i class="bi bi-download"></i> Download results (CSV)</button>
           </div>
         </div>
       </aside>
@@ -82,7 +67,7 @@
       <section class="col-lg-8 col-xl-9">
         <div class="card mb-4">
           <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <span><i class="bi bi-table"></i> Performance on the same puzzle</span>
+            <span><i class="bi bi-table"></i> GBFS on the same puzzle</span>
             <span id="instanceInfo" class="small text-body-secondary fw-normal"></span>
           </div>
           <div class="card-body p-0">
@@ -90,7 +75,8 @@
               <table class="table table-hover table-compare mb-0">
                 <thead class="table-light">
                   <tr>
-                    <th scope="col">Algorithm</th>
+                    <th scope="col">Heuristic</th>
+                    <th scope="col" class="text-end">h(start)</th>
                     <th scope="col">Solution Found</th>
                     <th scope="col" class="text-end">Moves</th>
                     <th scope="col" class="text-end">Nodes Generated</th>
@@ -98,11 +84,10 @@
                     <th scope="col" class="text-end">Max Depth</th>
                     <th scope="col" class="text-end">Time</th>
                     <th scope="col">Memory</th>
-                    <th scope="col">Optimal?</th>
                   </tr>
                 </thead>
                 <tbody id="resultsBody">
-                  <tr><td colspan="9" class="text-center text-body-secondary py-4 small">Press <b>Run Comparison</b> to evaluate all algorithms.</td></tr>
+                  <tr><td colspan="9" class="text-center text-body-secondary py-4 small">Press <b>Run Comparison</b> to evaluate both heuristics.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -112,7 +97,7 @@
         <div class="row g-4 mb-4">
           <div class="col-xl-6">
             <div class="card h-100">
-              <div class="card-header"><i class="bi bi-bar-chart-line"></i> Nodes expanded <span class="small text-body-secondary fw-normal">(log scale)</span></div>
+              <div class="card-header"><i class="bi bi-bar-chart-line"></i> Nodes expanded</div>
               <div class="card-body"><div id="chartExpanded" class="chart"><span class="small text-body-secondary">—</span></div></div>
             </div>
           </div>
@@ -124,14 +109,42 @@
           </div>
           <div class="col-xl-6">
             <div class="card h-100">
-              <div class="card-header"><i class="bi bi-memory"></i> Peak memory <span class="small text-body-secondary fw-normal">(nodes held, log scale)</span></div>
+              <div class="card-header"><i class="bi bi-memory"></i> Peak memory <span class="small text-body-secondary fw-normal">(nodes held)</span></div>
               <div class="card-body"><div id="chartMemory" class="chart"><span class="small text-body-secondary">—</span></div></div>
             </div>
           </div>
           <div class="col-xl-6">
             <div class="card h-100">
-              <div class="card-header"><i class="bi bi-signpost"></i> Solution length <span class="small text-body-secondary fw-normal">(moves, log scale)</span></div>
+              <div class="card-header"><i class="bi bi-signpost"></i> Solution length <span class="small text-body-secondary fw-normal">(moves)</span></div>
               <div class="card-body"><div id="chartMoves" class="chart"><span class="small text-body-secondary">—</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span><i class="bi bi-collection"></i> Average over random puzzles</span>
+            <span id="batchInfo" class="small text-body-secondary fw-normal"></span>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover table-compare mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th scope="col">Heuristic</th>
+                    <th scope="col" class="text-end">Solved</th>
+                    <th scope="col" class="text-end">Avg Moves</th>
+                    <th scope="col" class="text-end">Avg Nodes Expanded</th>
+                    <th scope="col" class="text-end">Max Nodes Expanded</th>
+                    <th scope="col" class="text-end">Avg Time</th>
+                    <th scope="col" class="text-end">Avg Peak Memory</th>
+                    <th scope="col" class="text-end">Fewer Expansions</th>
+                  </tr>
+                </thead>
+                <tbody id="batchBody">
+                  <tr><td colspan="8" class="text-center text-body-secondary py-4 small">The batch test runs together with the comparison.</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -154,10 +167,6 @@
   <script src="js/core/priority-queue.js"></script>
   <script src="js/core/search-context.js"></script>
   <script src="js/algorithms/gbfs.js"></script>
-  <script src="js/algorithms/bfs.js"></script>
-  <script src="js/algorithms/dfs.js"></script>
-  <script src="js/algorithms/dls.js"></script>
-  <script src="js/algorithms/best-first.js"></script>
   <script src="js/algorithms/registry.js"></script>
   <script src="js/ui/board.js"></script>
   <script src="js/ui/charts.js"></script>

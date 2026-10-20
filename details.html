@@ -52,7 +52,7 @@
               </table>
             </div>
             <p class="small mb-0"><b>Objective:</b> understand state-space search by building an interactive web application that solves the
-              8-puzzle and visually shows how each algorithm searches for the goal state. Every algorithm is implemented from scratch in JavaScript.</p>
+              8-puzzle and visually shows how the assigned algorithm, Greedy Best-First Search, searches for the goal state. It is implemented from scratch in JavaScript.</p>
           </div>
         </section>
 
@@ -109,7 +109,7 @@
               <li><b>Enter the puzzle</b> in the two 3×3 grids. Type digits 1–8 and use <kbd>_</kbd> (or leave a cell empty) for the blank.
                 You can also type a whole state in the text box below each grid, e.g. <code>2 8 3 1 6 4 7 _ 5</code>. Arrow keys move between cells.</li>
               <li>Or click <b>Generate Random Puzzle</b> (Easy, Medium, Hard or Fully random). Generated puzzles are always solvable.</li>
-              <li><b>Choose the algorithm.</b> GBFS is selected by default. For GBFS and A* choose the heuristic; for DLS set the depth limit; for IDDLS set the maximum depth.</li>
+              <li><b>Choose the heuristic.</b> The solver uses Greedy Best-First Search; pick Manhattan Distance or Misplaced Tiles as h(n).</li>
               <li>Press <b>Run</b>. The search plays back one expansion per step, then the solution path is animated move by move.</li>
               <li>Read the panels: current node and parent, generated successors (green = added, grey = already explored, yellow = already in the frontier), the Open and Closed lists, the h(n) / depth chart, then the Solution Summary and Final Solution Path.</li>
             </ol>
@@ -128,20 +128,20 @@
               </table>
             </div>
 
-            <h3 class="h6 fw-bold mt-3"><i class="bi bi-bar-chart-line text-accent"></i> Algorithm Comparison</h3>
+            <h3 class="h6 fw-bold mt-3"><i class="bi bi-bar-chart-line text-accent"></i> Heuristic Comparison</h3>
             <ol>
               <li>The puzzle last used in the Solver is loaded automatically, so both pages work on the same instance.</li>
-              <li>Pick the heuristic, the DLS limit and the IDDLS maximum depth, then press <b>Run Comparison</b>.</li>
-              <li>Read the table (the assigned GBFS row is highlighted), the four charts and the observations. Use <b>Download table (CSV)</b> to save the results.</li>
+              <li>Choose how many random puzzles to include in the batch test, then press <b>Run Comparison</b>.</li>
+              <li>Read the same-puzzle table (GBFS with Manhattan Distance vs Misplaced Tiles), the four charts, the batch averages and the observations. Use <b>Download results (CSV)</b> to save them.</li>
             </ol>
 
             <h3 class="h6 fw-bold mt-3"><i class="bi bi-book text-accent"></i> Algorithm Description</h3>
-            <p>Use the menu on the left to jump to an algorithm. Each card has a <b>Try it in the solver</b> button that opens the Solver with that algorithm selected.</p>
+            <p>Use the menu on the left to jump between GBFS's description, the worked example, the heuristics and the theory overview. The <b>Try GBFS in the solver</b> button opens the Solver.</p>
 
             <h3 class="h6 fw-bold mt-3"><i class="bi bi-compass text-accent"></i> Getting around</h3>
             <ul class="mb-0">
               <li>The <b>menu bar</b> at the top is the same on every page; the logo always returns to <b>Home</b>.</li>
-              <li>Inner pages show a <b>breadcrumb</b>, numbered <b>section steps</b> (1 Solver → 2 Comparison → 3 Algorithms → 4 Details) and a <b>Back to Home</b> button.</li>
+              <li>Inner pages show a <b>breadcrumb</b>, numbered <b>section steps</b> (1 Solver → 2 Comparison → 3 Algorithm → 4 Details) and a <b>Back to Home</b> button.</li>
               <li>At the bottom of each page, <b>Previous / Next section</b> cards lead through the sections in order.</li>
               <li>The <i class="bi bi-moon-stars"></i> button switches between light and dark mode.</li>
             </ul>
@@ -158,12 +158,12 @@
                 <tbody>
                   <tr><td>Home page: course, title, student name, registration number, introduction, navigation</td><td><a href="index.html">Home</a></td></tr>
                   <tr><td>Puzzle input: enter initial and goal states / generate a random solvable puzzle</td><td><a href="solver.html">Solver</a> → Puzzle Input</td></tr>
-                  <tr><td>Algorithm selection (BFS, DFS, DLS + depth limit, IDDLS, GBFS, A*) and heuristic selection</td><td><a href="solver.html">Solver</a> → Algorithm</td></tr>
+                  <tr><td>Assigned algorithm (Greedy Best-First Search) with heuristic selection: Misplaced Tiles, Manhattan Distance</td><td><a href="solver.html">Solver</a> → Algorithm</td></tr>
                   <tr><td>Initial, goal and current state, generated successors, final solution path, animated blank movement</td><td><a href="solver.html">Solver</a></td></tr>
                   <tr><td>Current node, nodes generated and expanded, frontier, explored, depth, parent, path cost, h(n), g(n), f(n)</td><td><a href="solver.html">Solver</a> → Search Process</td></tr>
                   <tr><td>Solution summary: found, moves, nodes, max depth, execution time, path cost, memory</td><td><a href="solver.html">Solver</a> → Solution Summary</td></tr>
-                  <tr><td>Comparison table of all algorithms on the same puzzle</td><td><a href="compare.html">Comparison</a></td></tr>
-                  <tr><td>Algorithm information: description, principle, advantages, limitations, complexity, completeness, optimality</td><td><a href="algorithms.html">Algorithms</a></td></tr>
+                  <tr><td>Performance comparison: GBFS with both heuristics on the same puzzle and over random puzzles</td><td><a href="compare.html">Comparison</a></td></tr>
+                  <tr><td>Algorithm information: description, principle, advantages, limitations, complexity, completeness, optimality</td><td><a href="algorithms.html">Algorithm</a></td></tr>
                   <tr><td>Run, Pause, Resume, Next Step, Previous Step, Reset, Change Speed</td><td><a href="solver.html">Solver</a> → controls bar</td></tr>
                 </tbody>
               </table>
@@ -192,14 +192,14 @@
 <pre class="pseudocode mb-0">AI_Puzzle_solver/
 ├── index.html          Home (hub)
 ├── solver.html         Puzzle Solver
-├── compare.html        Algorithm Comparison
+├── compare.html        Heuristic Comparison
 ├── algorithms.html     Algorithm Description
 ├── details.html        Project Details (this page)
 ├── css/style.css
 ├── js/
 │   ├── config.js       student details and limits
 │   ├── core/           puzzle model, heuristics, priority queue, search context
-│   ├── algorithms/     gbfs.js ★, bfs.js, dfs.js, dls.js, best-first.js, registry.js
+│   ├── algorithms/     gbfs.js ★ (Greedy Best-First Search), registry.js
 │   ├── data/           algorithm descriptions
 │   ├── ui/             animated board, puzzle input, charts, shared navigation
 │   └── pages/          one controller per page

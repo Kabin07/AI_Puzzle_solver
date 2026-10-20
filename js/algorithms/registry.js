@@ -1,5 +1,6 @@
 /*
  * Algorithm registry and the single entry point EP.solve().
+ * This project implements the assigned algorithm only: Greedy Best-First Search.
  */
 (function (root) {
   'use strict';
@@ -8,19 +9,21 @@
   const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
   EP.algorithms = {
-    bfs: { key: 'bfs', name: 'Breadth-First Search', short: 'BFS', type: 'Uninformed', informed: false, run: EP.search.bfs, frontierKind: 'FIFO queue' },
-    dfs: { key: 'dfs', name: 'Depth-First Search', short: 'DFS', type: 'Uninformed', informed: false, run: EP.search.dfs, frontierKind: 'LIFO stack' },
-    dls: { key: 'dls', name: 'Depth-Limited Search', short: 'DLS', type: 'Uninformed', informed: false, run: EP.search.dls, frontierKind: 'LIFO stack', params: ['depthLimit'] },
-    iddls: { key: 'iddls', name: 'Iterative Deepening DLS', short: 'IDDLS', type: 'Uninformed', informed: false, run: EP.search.iddls, frontierKind: 'LIFO stack', params: ['maxDepth'] },
-    ucs: { key: 'ucs', name: 'Uniform-Cost Search', short: 'UCS', type: 'Uninformed', informed: false, run: EP.search.ucs, frontierKind: 'Priority queue on g(n)', usesCost: true },
-    gbfs: { key: 'gbfs', name: 'Greedy Best-First Search', short: 'GBFS', type: 'Informed', informed: true, run: EP.search.gbfs, frontierKind: 'Priority queue on h(n)' },
-    astar: { key: 'astar', name: 'A* Search', short: 'A*', type: 'Informed', informed: true, run: EP.search.astar, frontierKind: 'Priority queue on f(n) = g(n) + h(n)' },
+    gbfs: {
+      key: 'gbfs',
+      name: 'Greedy Best-First Search',
+      short: 'GBFS',
+      type: 'Informed',
+      informed: true,
+      run: EP.search.gbfs,
+      frontierKind: 'Priority queue on h(n)',
+    },
   };
-  EP.ALGORITHM_ORDER = ['bfs', 'dfs', 'dls', 'iddls', 'ucs', 'gbfs', 'astar'];
+  EP.ALGORITHM_ORDER = ['gbfs'];
 
   /**
-   * Run one algorithm.
-   * options: { start, goal, heuristic: 'manhattan'|'misplaced', depthLimit, maxDepth, trace, maxExpansions }
+   * Run GBFS.
+   * options: { start, goal, heuristic: 'manhattan'|'misplaced', trace, maxExpansions, maxTraceSteps, previewSize }
    */
   EP.solve = function solve(key, options) {
     const algo = EP.algorithms[key];
@@ -30,9 +33,7 @@
       start: options.start,
       goal: options.goal,
       heuristicKey,
-      heuristic: algo.informed ? EP.createHeuristic(heuristicKey, options.goal) : null,
-      depthLimit: options.depthLimit == null ? 10 : options.depthLimit,
-      maxDepth: options.maxDepth == null ? 31 : options.maxDepth,
+      heuristic: EP.createHeuristic(heuristicKey, options.goal),
     };
     const ctx = new EP.SearchContext({
       trace: !!options.trace,
@@ -44,8 +45,8 @@
     const result = algo.run(problem, ctx);
     result.timeMs = now() - t0;
     result.algorithm = key;
-    result.heuristic = algo.informed ? heuristicKey : null;
-    result.problem = { start: problem.start, goal: problem.goal, depthLimit: problem.depthLimit, maxDepth: problem.maxDepth };
+    result.heuristic = heuristicKey;
+    result.problem = { start: problem.start, goal: problem.goal };
     return result;
   };
 
@@ -91,10 +92,6 @@
     switch (result.status) {
       case 'found':
         return 'Solution found';
-      case 'cutoff':
-        return result.algorithm === 'dls'
-          ? `Not found within depth limit ${result.depthLimit}`
-          : `Not found up to depth ${result.finalLimit}`;
       case 'limit':
         return 'Not found (expansion limit reached)';
       default:

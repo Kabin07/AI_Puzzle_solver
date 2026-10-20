@@ -10,7 +10,16 @@
   const esc = ui.esc;
   const $ = (id) => document.getElementById(id);
 
-  const ORDER = ['gbfs', 'bfs', 'dfs', 'dls', 'iddls', 'ucs', 'astar'];
+  // Theory-only overview rows (only GBFS is implemented in this project)
+  const STRATEGIES = [
+    { key: 'bfs', short: 'BFS', type: 'Uninformed' },
+    { key: 'dfs', short: 'DFS', type: 'Uninformed' },
+    { key: 'dls', short: 'DLS', type: 'Uninformed' },
+    { key: 'iddls', short: 'IDDLS', type: 'Uninformed' },
+    { key: 'ucs', short: 'UCS', type: 'Uninformed' },
+    { key: 'gbfs', short: 'GBFS', type: 'Informed' },
+    { key: 'astar', short: 'A*', type: 'Informed' },
+  ];
 
   const GBFS_PSEUDOCODE = `function GREEDY-BEST-FIRST-SEARCH(problem, h) returns a solution or failure
     node ← NODE(state = problem.INITIAL, g = 0)
@@ -32,18 +41,22 @@
   }
 
   function renderNav() {
-    const items = [['overview', 'Overview'], ['heuristics', 'Heuristic functions']].concat(
-      ORDER.map((k) => [k, `${EP.algorithms[k].short}: ${EP.algorithms[k].name}${k === EP.config.assignedAlgorithm ? ' ★' : ''}`])
-    );
+    const items = [
+      ['gbfs', 'Greedy Best-First Search ★'],
+      ['gbfs-example', 'Worked example'],
+      ['heuristics', 'Heuristic functions'],
+      ['overview', 'GBFS among other strategies'],
+    ];
     $('algoNav').innerHTML = items.map(([id, label]) => `<a class="list-group-item list-group-item-action" href="#${id}">${esc(label)}</a>`).join('');
   }
 
   function renderOverview() {
-    $('overviewBody').innerHTML = EP.ALGORITHM_ORDER.map((k) => {
-      const a = EP.algorithms[k];
+    $('overviewBody').innerHTML = STRATEGIES.map((a) => {
+      const k = a.key;
       const info = EP.algorithmInfo[k];
-      return `<tr${k === EP.config.assignedAlgorithm ? ' class="table-active"' : ''}>
-        <td><a href="#${k}" class="fw-semibold text-decoration-none">${esc(a.short)}</a>${k === EP.config.assignedAlgorithm ? ' <span class="badge badge-assigned">Assigned</span>' : ''}</td>
+      const mine = k === EP.config.assignedAlgorithm;
+      return `<tr${mine ? ' class="table-active"' : ''}>
+        <td>${mine ? `<a href="#gbfs" class="fw-semibold text-decoration-none">${esc(a.short)}</a> <span class="badge badge-assigned">Implemented</span>` : `<span class="fw-semibold">${esc(a.short)}</span>`}</td>
         <td class="small">${esc(a.type)}</td>
         <td class="small">${esc(info.evaluation)}</td>
         <td class="small font-monospace">${esc(info.time)}</td>
@@ -120,7 +133,7 @@
         </div>
         ${info.implementationNote ? `<p class="small text-body-secondary"><i class="bi bi-info-circle"></i> <b>Implementation note:</b> ${esc(info.implementationNote)}</p>` : ''}
         ${assigned ? '<div id="gbfsExample"></div>' : ''}
-        <a class="btn btn-sm btn-outline-secondary" href="solver.html?algo=${k}"><i class="bi bi-play-circle"></i> Try ${esc(a.short)} in the solver</a>
+        <a class="btn btn-sm btn-outline-secondary" href="solver.html"><i class="bi bi-play-circle"></i> Try ${esc(a.short)} in the solver</a>
       </div></section>`;
   }
 
@@ -151,19 +164,14 @@
       })
       .join('');
 
-    // Find a deterministic random instance where GBFS returns a longer path than optimal
-    let seed = 2024;
-    const rng = () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296);
-    let counter = null;
-    for (let t = 0; t < 300 && !counter; t++) {
-      const s = P.randomPuzzle(goal, 'random', rng);
-      const g = EP.solve('gbfs', { start: s, goal, heuristic: 'manhattan' });
-      const a = EP.solve('astar', { start: s, goal, heuristic: 'manhattan' });
-      if (g.moves > a.moves + 4) counter = { s, g, a };
-    }
+    // A known instance whose shortest solution is 23 moves; GBFS is run live on it.
+    const CASE_START = '702645381';
+    const CASE_OPTIMAL = 23;
+    const g = EP.solve('gbfs', { start: CASE_START, goal, heuristic: 'manhattan' });
+    const counter = g.found && g.moves > CASE_OPTIMAL ? { s: CASE_START, g } : null;
 
     el.innerHTML = `
-      <h3 class="h6 fw-bold mt-2">Worked example: GBFS + Manhattan on the assignment puzzle</h3>
+      <h3 class="h6 fw-bold mt-2" id="gbfs-example">Worked example: GBFS + Manhattan on the assignment puzzle</h3>
       <p class="small">Each row is one expansion. Successors crossed out were discarded (already explored or already in the frontier).
         The last column lists the h-values in the frontier after the expansion; GBFS always pops the smallest.
         Traced live by the implementation in <code>js/algorithms/gbfs.js</code>.</p>
@@ -179,9 +187,9 @@
         counter
           ? `<div class="alert alert-warning small">
               <b>Why GBFS is not optimal:</b> for the initial state <span class="font-monospace">${esc(P.format(counter.s, ' / '))}</span>,
-              GBFS (Manhattan) returns a <b>${counter.g.moves}-move</b> solution after ${counter.g.expanded} expansions, while A* finds the optimal
-              <b>${counter.a.moves}-move</b> solution (${counter.a.expanded} expansions). GBFS commits to whatever looks closest and never accounts for the moves already made.
-              <a class="alert-link" href="solver.html?algo=gbfs&h=manhattan&start=${counter.s}&goal=${goal}">Open this case in the solver →</a>
+              GBFS (Manhattan) returns a <b>${counter.g.moves}-move</b> solution after ${counter.g.expanded} expansions, although the
+              shortest possible solution has only <b>${CASE_OPTIMAL} moves</b>. GBFS commits to whatever looks closest and never accounts for the moves already made.
+              <a class="alert-link" href="solver.html?h=manhattan&start=${counter.s}&goal=${goal}">Open this case in the solver →</a>
             </div>`
           : ''
       }`;
@@ -191,7 +199,7 @@
     renderNav();
     renderOverview();
     renderHeuristics();
-    $('algoSections').innerHTML = ORDER.map(sectionHtml).join('');
+    $('algoSections').innerHTML = sectionHtml(EP.config.assignedAlgorithm);
     renderGbfsExample();
     if (location.hash) {
       const target = document.querySelector(location.hash);

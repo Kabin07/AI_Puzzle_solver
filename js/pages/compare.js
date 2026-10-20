@@ -1,7 +1,9 @@
 /*
- * Comparison page: runs every algorithm on the same puzzle instance and
- * reports found / moves / nodes / depth / time / memory, with charts and
- * automatically generated observations.
+ * Heuristic comparison page.
+ * Runs Greedy Best-First Search with Manhattan Distance and with Misplaced Tiles
+ *  1) on the same puzzle instance (table + charts), and
+ *  2) on a batch of random solvable puzzles (averages),
+ * then writes observations and offers a CSV download.
  */
 (function () {
   'use strict';
@@ -10,230 +12,230 @@
   const esc = ui.esc;
   const $ = (id) => document.getElementById(id);
 
+  const HEURISTICS = ['manhattan', 'misplaced'];
+  const NAME = { manhattan: 'Manhattan Distance', misplaced: 'Misplaced Tiles' };
+
   let setup;
-  let lastRows = null;
-  let lastPuzzle = null;
+  let last = null; // { puzzle, single: {h: result}, batch: {h: stats} | null }
 
   const fmt = (v) => (v == null ? '—' : v.toLocaleString());
-  const fmtTime = (ms) => EP.formatTime(ms);
-  const clampInt = (v, lo, hi, d) => {
-    const n = parseInt(v, 10);
-    return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d;
-  };
-  const hShort = { manhattan: 'Manhattan', misplaced: 'Misplaced' };
+  const fmt1 = (v) => (v == null ? '—' : v.toLocaleString(undefined, { maximumFractionDigits: 1 }));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  function plan() {
-    const h = $('heuristic').value;
-    const other = h === 'manhattan' ? 'misplaced' : 'manhattan';
-    const depthLimit = clampInt($('depthLimit').value, 0, 60, 10);
-    const maxDepth = clampInt($('maxDepth').value, 0, 60, 31);
-    const runs = [
-      { key: 'bfs' },
-      { key: 'dfs' },
-      { key: 'dls', depthLimit },
-      { key: 'iddls', maxDepth },
-    ];
-    if ($('includeUcs').checked) runs.push({ key: 'ucs' });
-    runs.push({ key: 'gbfs', heuristic: h, primary: true }, { key: 'astar', heuristic: h });
-    if ($('bothHeuristics').checked) runs.push({ key: 'gbfs', heuristic: other }, { key: 'astar', heuristic: other });
-    runs.forEach((r) => {
-      const a = EP.algorithms[r.key];
-      r.label = a.short + (a.informed ? ` (${hShort[r.heuristic]})` : '') + (r.key === 'dls' ? ` (ℓ = ${depthLimit})` : '');
-      r.name = a.name;
-      r.assigned = r.key === EP.config.assignedAlgorithm;
-    });
-    return runs;
-  }
-
-  function rowHtml(run, r, optimal) {
-    const a = EP.algorithms[run.key];
-    const name = `<div class="fw-semibold">${esc(run.label)} ${run.assigned && run.primary ? '<span class="badge badge-assigned ms-1">Assigned</span>' : ''}</div>
-      <div class="small text-body-secondary">${esc(a.type)}</div>`;
+  // ---------------------------------------------------------- same puzzle
+  function singleRow(h, r, hStart) {
+    const head = `<td><div class="fw-semibold">GBFS + ${esc(NAME[h])}</div><div class="small text-body-secondary">${h === 'manhattan' ? 'h₂(n)' : 'h₁(n)'}</div></td>`;
     if (!r) {
-      return `<tr class="${run.assigned && run.primary ? 'assigned-row' : ''}"><td>${name}</td>
-        <td colspan="8" class="text-body-secondary small"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Waiting…</td></tr>`;
+      return `<tr>${head}<td colspan="8" class="text-body-secondary small"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Running…</td></tr>`;
     }
     const found = r.found
       ? '<span class="badge text-bg-success">Yes</span>'
-      : `<span class="badge text-bg-danger" title="${esc(EP.describeStatus(r))}">No</span><div class="small text-body-secondary">${esc(EP.describeStatus(r).replace('Not found', '').replace(/^[\s(]+|\)$/g, ''))}</div>`;
+      : `<span class="badge text-bg-danger">No</span><div class="small text-body-secondary">${esc(EP.describeStatus(r))}</div>`;
     const memLabel = EP.memoryLabel(r.peakNodes);
     const memColor = { Low: 'success', Medium: 'warning', High: 'danger' }[memLabel];
-    const opt =
-      !r.found || optimal == null
-        ? '—'
-        : r.moves === optimal
-          ? '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Yes</span>'
-          : `<span class="text-warning-emphasis">No (+${(r.moves - optimal).toLocaleString()})</span>`;
-    return `<tr class="${run.assigned && run.primary ? 'assigned-row' : ''}">
-      <td>${name}</td>
+    return `<tr${h === 'manhattan' ? ' class="assigned-row"' : ''}>${head}
+      <td class="text-end">${hStart}</td>
       <td>${found}</td>
       <td class="text-end">${fmt(r.moves)}</td>
       <td class="text-end">${fmt(r.generated)}</td>
       <td class="text-end">${fmt(r.expanded)}</td>
       <td class="text-end">${fmt(r.maxDepth)}</td>
-      <td class="text-end">${fmtTime(r.timeMs)}</td>
-      <td><span class="badge text-bg-${memColor}">${memLabel}</span><div class="small text-body-secondary">≈ ${EP.formatBytes(r.memoryBytes)}</div></td>
-      <td>${opt}</td></tr>`;
+      <td class="text-end">${EP.formatTime(r.timeMs)}</td>
+      <td><span class="badge text-bg-${memColor}">${memLabel}</span><div class="small text-body-secondary">≈ ${EP.formatBytes(r.memoryBytes)}</div></td></tr>`;
   }
 
-  function renderTable(runs, results, optimal) {
-    $('resultsBody').innerHTML = runs.map((run, i) => rowHtml(run, results[i], optimal)).join('');
+  function renderSingle(puzzle, single) {
+    $('resultsBody').innerHTML = HEURISTICS.map((h) => singleRow(h, single[h], EP.createHeuristic(h, puzzle.goal)(puzzle.start))).join('');
   }
 
-  function renderCharts(runs, results) {
+  function renderCharts(single) {
     const rows = (fn, display) =>
-      runs.map((run, i) => ({
-        label: run.label.replace(' (ℓ = ', ' ℓ=').replace(')', '').replace(' (', ' '),
-        value: fn(results[i]),
-        display: display ? display(results[i]) : null,
-        highlight: run.assigned && run.primary,
+      HEURISTICS.map((h) => ({
+        label: NAME[h],
+        value: single[h] ? fn(single[h]) : null,
+        display: single[h] && display ? display(single[h]) : null,
+        highlight: h === 'manhattan',
       }));
-    ui.barChart($('chartExpanded'), rows((r) => r.expanded), { log: true });
-    ui.barChart($('chartTime'), rows((r) => r.timeMs, (r) => fmtTime(r.timeMs)));
-    ui.barChart($('chartMemory'), rows((r) => r.peakNodes, (r) => r.peakNodes.toLocaleString()), { log: true });
-    ui.barChart($('chartMoves'), rows((r) => (r.found ? r.moves : null), (r) => (r.found ? r.moves.toLocaleString() : 'not found')), { log: true });
+    ui.barChart($('chartExpanded'), rows((r) => r.expanded, (r) => r.expanded.toLocaleString()));
+    ui.barChart($('chartTime'), rows((r) => r.timeMs, (r) => EP.formatTime(r.timeMs)));
+    ui.barChart($('chartMemory'), rows((r) => r.peakNodes, (r) => r.peakNodes.toLocaleString()));
+    ui.barChart($('chartMoves'), rows((r) => (r.found ? r.moves : null), (r) => (r.found ? r.moves.toLocaleString() : 'not found')));
   }
 
-  function observations(runs, results, optimal) {
-    const out = [];
-    const by = (key, h) => {
-      const i = runs.findIndex((r) => r.key === key && (h === undefined || r.heuristic === h));
-      return i < 0 ? null : results[i];
-    };
-    const h = $('heuristic').value;
-    const other = h === 'manhattan' ? 'misplaced' : 'manhattan';
-    const gbfs = by('gbfs', h);
-    const astar = by('astar', h);
-    const bfs = by('bfs');
-    const dfs = by('dfs');
-    const dls = by('dls');
-    const iddls = by('iddls');
+  // --------------------------------------------------------- batch test
+  async function runBatch(goal, n, onProgress) {
+    const stats = {};
+    HEURISTICS.forEach((h) => (stats[h] = { solved: 0, moves: 0, expanded: 0, maxExpanded: 0, time: 0, peak: 0, wins: 0 }));
+    let ties = 0;
+    for (let i = 0; i < n; i++) {
+      const start = EP.puzzle.randomPuzzle(goal, 'random');
+      const res = {};
+      for (const h of HEURISTICS) {
+        const r = EP.solve('gbfs', { start, goal, heuristic: h });
+        res[h] = r;
+        const s = stats[h];
+        if (r.found) {
+          s.solved++;
+          s.moves += r.moves;
+        }
+        s.expanded += r.expanded;
+        s.maxExpanded = Math.max(s.maxExpanded, r.expanded);
+        s.time += r.timeMs;
+        s.peak += r.peakNodes;
+      }
+      if (res.manhattan.expanded < res.misplaced.expanded) stats.manhattan.wins++;
+      else if (res.misplaced.expanded < res.manhattan.expanded) stats.misplaced.wins++;
+      else ties++;
+      if (i % 5 === 4) {
+        onProgress(i + 1);
+        await sleep(0); // keep the page responsive
+      }
+    }
+    HEURISTICS.forEach((h) => {
+      const s = stats[h];
+      s.avgMoves = s.solved ? s.moves / s.solved : null;
+      s.avgExpanded = s.expanded / n;
+      s.avgTime = s.time / n;
+      s.avgPeak = s.peak / n;
+    });
+    stats.n = n;
+    stats.ties = ties;
+    return stats;
+  }
 
-    if (optimal != null) out.push(`The optimal solution for this instance is <b>${optimal}</b> moves (found by BFS, IDDLS, UCS and A*).`);
-    if (gbfs && bfs) {
-      const factor = bfs.expanded / Math.max(gbfs.expanded, 1);
-      out.push(
-        `<b>GBFS (${hShort[h]})</b> expanded <b>${fmt(gbfs.expanded)}</b> nodes, compared with ${fmt(bfs.expanded)} for BFS` +
-          (factor >= 1.5 ? ` (about <b>${factor.toFixed(factor >= 10 ? 0 : 1)}×</b> fewer)` : '') +
-          `. Its solution has ${fmt(gbfs.moves)} moves` +
-          (optimal != null && gbfs.moves > optimal ? `, which is <b>${gbfs.moves - optimal}</b> more than optimal. GBFS ignores g(n), so it is not optimal.` : `, which is optimal for this instance.`)
-      );
+  function renderBatch(stats) {
+    if (!stats) {
+      $('batchBody').innerHTML = '<tr><td colspan="8" class="text-center text-body-secondary py-3 small">Batch test skipped (batch size: none).</td></tr>';
+      $('batchInfo').textContent = '';
+      return;
     }
-    if (gbfs && astar) {
+    $('batchInfo').textContent = `${stats.n} fully random solvable puzzles · same puzzles for both heuristics`;
+    $('batchBody').innerHTML = HEURISTICS.map((h) => {
+      const s = stats[h];
+      return `<tr${h === 'manhattan' ? ' class="assigned-row"' : ''}>
+        <td class="fw-semibold">GBFS + ${esc(NAME[h])}</td>
+        <td class="text-end">${s.solved} / ${stats.n}</td>
+        <td class="text-end">${fmt1(s.avgMoves)}</td>
+        <td class="text-end">${fmt1(s.avgExpanded)}</td>
+        <td class="text-end">${fmt(s.maxExpanded)}</td>
+        <td class="text-end">${EP.formatTime(s.avgTime)}</td>
+        <td class="text-end">${fmt1(s.avgPeak)} nodes</td>
+        <td class="text-end">${s.wins} puzzle${s.wins === 1 ? '' : 's'}</td></tr>`;
+    }).join('');
+  }
+
+  // ------------------------------------------------------- observations
+  function observations(puzzle, single, batch) {
+    const out = [];
+    const m = single.manhattan;
+    const x = single.misplaced;
+    const hm = EP.createHeuristic('manhattan', puzzle.goal)(puzzle.start);
+    const hx = EP.createHeuristic('misplaced', puzzle.goal)(puzzle.start);
+    out.push(
+      `For the initial state, Manhattan Distance estimates <b>${hm}</b> and Misplaced Tiles estimates <b>${hx}</b>. Manhattan is always ≥ Misplaced (it <i>dominates</i> it), so it gives GBFS a more informed estimate.`
+    );
+    if (m && x) {
+      const better = m.expanded <= x.expanded ? 'manhattan' : 'misplaced';
+      const worse = better === 'manhattan' ? 'misplaced' : 'manhattan';
+      const factor = single[worse].expanded / Math.max(single[better].expanded, 1);
       out.push(
-        `A* (${hShort[h]}) expanded ${fmt(astar.expanded)} nodes against ${fmt(gbfs.expanded)} for GBFS. ` +
-          (astar.expanded > gbfs.expanded
-            ? 'A* expands more because adding g(n) makes it back off long paths, and that is what guarantees optimality.'
-            : 'Here A* was at least as efficient as GBFS and still optimal.')
+        `On this puzzle GBFS + <b>${NAME[better]}</b> expanded <b>${fmt(single[better].expanded)}</b> nodes against ${fmt(single[worse].expanded)} with ${NAME[worse]}` +
+          (factor >= 1.2 ? ` (about <b>${factor.toFixed(factor >= 10 ? 0 : 1)}×</b> fewer).` : '.')
       );
+      if (m.found && x.found) {
+        out.push(
+          m.moves === x.moves
+            ? `Both heuristics led to a ${m.moves}-move solution.`
+            : `The solutions have different lengths: <b>${m.moves}</b> moves with Manhattan and <b>${x.moves}</b> with Misplaced Tiles. GBFS returns the first path it reaches, not the shortest one, so the heuristic also changes the path.`
+        );
+      }
     }
-    const g2 = by('gbfs', other);
-    const a2 = by('astar', other);
-    if (g2 && gbfs && a2 && astar) {
-      const man = h === 'manhattan' ? { g: gbfs, a: astar } : { g: g2, a: a2 };
-      const mis = h === 'manhattan' ? { g: g2, a: a2 } : { g: gbfs, a: astar };
+    if (batch) {
+      const bm = batch.manhattan;
+      const bx = batch.misplaced;
       out.push(
-        `Heuristic quality: with Misplaced Tiles, A* expanded ${fmt(mis.a.expanded)} nodes and GBFS ${fmt(mis.g.expanded)}. With Manhattan Distance, A* expanded ${fmt(man.a.expanded)} and GBFS ${fmt(man.g.expanded)}. Manhattan dominates Misplaced (h₂ ≥ h₁), so it usually guides the search better.`
+        `Over <b>${batch.n}</b> random puzzles, GBFS expanded on average <b>${fmt1(bm.avgExpanded)}</b> nodes with Manhattan and <b>${fmt1(bx.avgExpanded)}</b> with Misplaced Tiles. Manhattan needed fewer expansions on ${bm.wins} puzzles, Misplaced on ${bx.wins}${batch.ties ? `, with ${batch.ties} ties` : ''}.`
       );
-    }
-    if (dfs && dfs.found) {
-      out.push(`DFS found a solution of <b>${fmt(dfs.moves)}</b> moves after ${fmt(dfs.expanded)} expansions. Depth-first order commits to one branch, so its solutions are very long.`);
-    }
-    if (dls) {
       out.push(
-        dls.found
-          ? `DLS with ℓ = ${dls.depthLimit} found a ${dls.moves}-move solution${optimal != null && dls.moves > optimal ? ' (not optimal)' : ''}.`
-          : `DLS with ℓ = ${dls.depthLimit} found no solution${optimal != null ? `: the shortest solution needs ${optimal} moves, deeper than the limit` : ''}.`
+        `Average solution length was ${fmt1(bm.avgMoves)} moves (Manhattan) and ${fmt1(bx.avgMoves)} moves (Misplaced). Random puzzles need about 22 moves when solved optimally, so these longer paths show that GBFS is not optimal.`
       );
-    }
-    if (iddls && bfs && iddls.found) {
-      out.push(
-        `IDDLS needed ${iddls.iterations} iterations and ${fmt(iddls.expanded)} expansions (vs ${fmt(bfs.expanded)} for BFS) because it re-expands shallow levels. Its peak memory was ${fmt(iddls.peakNodes)} nodes against ${fmt(bfs.peakNodes)} for BFS.`
-      );
+      out.push(`Both heuristics solved every puzzle (${bm.solved}/${batch.n} and ${bx.solved}/${batch.n}). Graph-search GBFS is complete on the finite 8-puzzle state space.`);
     }
     $('observations').innerHTML = `<ul class="mb-0 ps-3">${out.map((o) => `<li class="mb-2">${o}</li>`).join('')}</ul>`;
   }
 
-  function toCsv(runs, results, optimal) {
-    const head = ['Algorithm', 'Solution Found', 'Moves', 'Nodes Generated', 'Nodes Expanded', 'Max Depth', 'Time (ms)', 'Peak Nodes', 'Memory (bytes, approx)', 'Memory Level', 'Optimal'];
-    const lines = [head];
-    runs.forEach((run, i) => {
-      const r = results[i];
-      lines.push([
-        run.label,
-        r.found ? 'Yes' : 'No',
-        r.moves == null ? '' : r.moves,
-        r.generated,
-        r.expanded,
-        r.maxDepth,
-        r.timeMs.toFixed(3),
-        r.peakNodes,
-        r.memoryBytes,
-        EP.memoryLabel(r.peakNodes),
-        r.found && optimal != null ? (r.moves === optimal ? 'Yes' : 'No') : '',
-      ]);
+  // ---------------------------------------------------------------- CSV
+  function toCsv(res) {
+    const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    const lines = [['Section', 'Heuristic', 'Solution Found / Solved', 'Moves (avg for batch)', 'Nodes Generated', 'Nodes Expanded (avg for batch)', 'Max Depth / Max Expanded', 'Time (ms)', 'Peak Nodes (avg for batch)', 'Memory (bytes, approx)']];
+    HEURISTICS.forEach((h) => {
+      const r = res.single[h];
+      lines.push(['Same puzzle', NAME[h], r.found ? 'Yes' : 'No', r.moves, r.generated, r.expanded, r.maxDepth, r.timeMs.toFixed(3), r.peakNodes, r.memoryBytes]);
     });
-    return lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    if (res.batch) {
+      HEURISTICS.forEach((h) => {
+        const s = res.batch[h];
+        lines.push([`Batch (${res.batch.n} random)`, NAME[h], `${s.solved}/${res.batch.n}`, s.avgMoves && s.avgMoves.toFixed(2), '', s.avgExpanded.toFixed(2), s.maxExpanded, s.avgTime.toFixed(3), s.avgPeak.toFixed(1), '']);
+      });
+    }
+    return lines.map((l) => l.map(q).join(',')).join('\r\n');
   }
 
-  function runComparison() {
+  // ---------------------------------------------------------------- run
+  async function runComparison() {
     const p = setup.read();
     if (!p.ok) {
       $('resultsBody').innerHTML = `<tr><td colspan="9" class="text-danger small py-3"><i class="bi bi-exclamation-triangle"></i> ${esc(p.error)}</td></tr>`;
       return;
     }
-    const runs = plan();
-    const results = new Array(runs.length).fill(null);
+    const puzzle = { start: p.start, goal: p.goal };
+    const n = parseInt($('batchSize').value, 10) || 0;
     const btn = $('btnCompare');
     btn.disabled = true;
     $('btnCsv').disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Running…';
     $('instanceInfo').innerHTML = `Initial <span class="font-monospace">${esc(EP.puzzle.format(p.start, ' / '))}</span> → Goal <span class="font-monospace">${esc(EP.puzzle.format(p.goal, ' / '))}</span>`;
-    renderTable(runs, results, null);
 
-    let i = 0;
-    const next = () => {
-      if (i >= runs.length) {
-        const optimalRun = results.find((r, k) => r.found && ['bfs', 'ucs', 'astar', 'iddls'].includes(runs[k].key));
-        const optimal = optimalRun ? optimalRun.moves : null;
-        renderTable(runs, results, optimal);
-        renderCharts(runs, results);
-        observations(runs, results, optimal);
-        lastRows = { runs, results, optimal };
-        lastPuzzle = p;
-        btn.disabled = false;
-        $('btnCsv').disabled = false;
-        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Run Comparison Again';
-        return;
-      }
-      const run = runs[i];
-      results[i] = EP.timedRun(run.key, {
-        start: p.start,
-        goal: p.goal,
-        heuristic: run.heuristic,
-        depthLimit: run.depthLimit,
-        maxDepth: run.maxDepth,
+    const single = {};
+    renderSingle(puzzle, single);
+    await sleep(30);
+    for (const h of HEURISTICS) {
+      single[h] = EP.timedRun('gbfs', { start: p.start, goal: p.goal, heuristic: h });
+      renderSingle(puzzle, single);
+      await sleep(15);
+    }
+    renderCharts(single);
+
+    let batch = null;
+    if (n > 0) {
+      $('batchBody').innerHTML = `<tr><td colspan="8" class="text-body-secondary small py-3"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span><span id="batchProgress">Solving 0 / ${n} random puzzles…</span></td></tr>`;
+      batch = await runBatch(p.goal, n, (k) => {
+        const el = $('batchProgress');
+        if (el) el.textContent = `Solving ${k} / ${n} random puzzles…`;
       });
-      renderTable(runs, results, null);
-      i++;
-      setTimeout(next, 15); // let the browser repaint between algorithms
-    };
-    setTimeout(next, 30);
+    }
+    renderBatch(batch);
+    observations(puzzle, single, batch);
+
+    last = { puzzle, single, batch };
+    btn.disabled = false;
+    $('btnCsv').disabled = false;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Run Comparison Again';
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     setup = new ui.PuzzleSetup($('setup'), {
       onChange: () => {
-        if (lastRows) $('instanceInfo').innerHTML = '<span class="text-warning-emphasis">Puzzle changed: run the comparison again</span>';
+        if (last) $('instanceInfo').innerHTML = '<span class="text-warning-emphasis">Puzzle changed: run the comparison again</span>';
       },
     });
     $('btnCompare').addEventListener('click', runComparison);
     $('btnCsv').addEventListener('click', () => {
-      if (!lastRows) return;
-      const blob = new Blob([toCsv(lastRows.runs, lastRows.results, lastRows.optimal)], { type: 'text/csv' });
+      if (!last) return;
+      const blob = new Blob([toCsv(last)], { type: 'text/csv' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `8puzzle-comparison-${lastPuzzle.start}.csv`;
+      a.download = `gbfs-heuristic-comparison-${last.puzzle.start}.csv`;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => {
@@ -241,6 +243,7 @@
         a.remove();
       }, 0);
     });
+
     // URL parameters: ?start=702645381&goal=123804765&autorun=1
     const q = new URLSearchParams(location.search);
     if (q.get('start') && q.get('goal')) {

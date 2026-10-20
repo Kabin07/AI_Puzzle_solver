@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>8-Puzzle AI Visualizer</title>
-  <meta name="description" content="Interactive 8-Puzzle Problem Solver using AI search algorithms: BFS, DFS, DLS, IDDLS, UCS, Greedy Best-First Search and A*.">
+  <meta name="description" content="Interactive 8-Puzzle Problem Solver using Greedy Best-First Search with the Misplaced Tiles and Manhattan Distance heuristics.">
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
   <script>(function(){try{var t=localStorage.getItem('ep.theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-bs-theme',t);}catch(e){}})();</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
@@ -25,7 +25,7 @@
             </span>
             <h1 class="display-5 mb-3" data-bind="title">Interactive 8-Puzzle Problem Solver using AI Search Algorithms</h1>
             <p class="lead text-body-secondary mb-4">
-              Solve the 8-puzzle with uninformed and informed search and watch every step: each node expansion, the frontier,
+              Solve the 8-puzzle with Greedy Best-First Search and watch every step: each node expansion, the frontier,
               the explored set and the final solution path.
             </p>
             <div class="d-flex flex-wrap gap-2 mb-4">
@@ -66,10 +66,10 @@
                 <span class="hub-icon"><i class="bi bi-play-circle"></i></span>
                 <div><span class="hub-num me-1">1</span> <span class="h5 fw-bold align-middle">Puzzle Solver</span></div>
               </div>
-              <p class="text-body-secondary mb-2">Set up a puzzle and watch an algorithm solve it step by step.</p>
+              <p class="text-body-secondary mb-2">Set up a puzzle and watch Greedy Best-First Search solve it step by step.</p>
               <ul class="small text-body-secondary mb-3">
                 <li>Enter initial and goal states, or generate a random solvable puzzle</li>
-                <li>Choose BFS, DFS, DLS, IDDLS, UCS, <b>GBFS</b> or A*, and the heuristic</li>
+                <li>Choose the heuristic: Manhattan Distance or Misplaced Tiles</li>
                 <li>See the current node, parent, successors, Open and Closed lists, g(n), h(n), f(n)</li>
                 <li>Run, Pause, Resume, Next, Previous, Reset and change the speed</li>
               </ul>
@@ -82,13 +82,13 @@
             <div class="card-body p-4">
               <div class="d-flex align-items-center gap-3 mb-3">
                 <span class="hub-icon"><i class="bi bi-bar-chart-line"></i></span>
-                <div><span class="hub-num me-1">2</span> <span class="h5 fw-bold align-middle">Algorithm Comparison</span></div>
+                <div><span class="hub-num me-1">2</span> <span class="h5 fw-bold align-middle">Heuristic Comparison</span></div>
               </div>
-              <p class="text-body-secondary mb-2">Run every algorithm on the same puzzle and compare the results.</p>
+              <p class="text-body-secondary mb-2">Compare GBFS with Manhattan Distance and with Misplaced Tiles.</p>
               <ul class="small text-body-secondary mb-3">
-                <li>Solution found, moves, nodes generated and expanded, max depth</li>
-                <li>Execution time and approximate memory usage</li>
-                <li>Charts for nodes, time, memory and solution length</li>
+                <li>Same puzzle: moves, nodes generated and expanded, max depth</li>
+                <li>Execution time and approximate memory usage, with charts</li>
+                <li>Averages over a batch of random puzzles</li>
                 <li>Automatically generated observations and CSV export</li>
               </ul>
               <span class="hub-go">Open the Comparison <i class="bi bi-arrow-right"></i></span>
@@ -102,12 +102,12 @@
                 <span class="hub-icon"><i class="bi bi-book"></i></span>
                 <div><span class="hub-num me-1">3</span> <span class="h5 fw-bold align-middle">Algorithm Description</span></div>
               </div>
-              <p class="text-body-secondary mb-2">Learn how each search algorithm works.</p>
+              <p class="text-body-secondary mb-2">Learn how Greedy Best-First Search works.</p>
               <ul class="small text-body-secondary mb-3">
-                <li>Description and working principle of all algorithms</li>
+                <li>Description, working principle and pseudocode</li>
                 <li>Advantages, limitations, time and space complexity</li>
                 <li>Completeness and optimality, plus both heuristic functions</li>
-                <li>GBFS in depth: pseudocode, worked example, why it is not optimal</li>
+                <li>Worked example traced live, and why GBFS is not optimal</li>
               </ul>
               <span class="hub-go">Open the Descriptions <i class="bi bi-arrow-right"></i></span>
             </div>
@@ -146,7 +146,7 @@
         </div>
         <div class="col-md-4">
           <a class="quick-link" href="compare.html?start=702645381&goal=123804765&autorun=1">
-            <i class="bi bi-trophy"></i><span><b>Compare all algorithms</b><br><span class="small text-body-secondary">On a hard 23-move puzzle</span></span></a>
+            <i class="bi bi-trophy"></i><span><b>Compare the two heuristics</b><br><span class="small text-body-secondary">On a hard 23-move puzzle</span></span></a>
         </div>
       </div>
     </section>
@@ -164,8 +164,8 @@
               state space, which has 181,440 reachable states.
             </p>
             <p>
-              Uninformed algorithms (BFS, DFS, DLS, IDDLS) search blindly. Informed algorithms (GBFS, A*) use a
-              <b>heuristic</b> such as Misplaced Tiles or Manhattan Distance to head towards the goal and expand far fewer nodes.
+              This project solves it with <b>Greedy Best-First Search</b>, an informed strategy. It uses a <b>heuristic</b>,
+              Misplaced Tiles or Manhattan Distance, to always expand the state that looks closest to the goal.
             </p>
             <a href="details.html#problem" class="btn btn-sm btn-outline-secondary"><i class="bi bi-journal-text"></i> Full problem formulation and solvability</a>
           </div>
@@ -196,10 +196,6 @@
   <script src="js/core/priority-queue.js"></script>
   <script src="js/core/search-context.js"></script>
   <script src="js/algorithms/gbfs.js"></script>
-  <script src="js/algorithms/bfs.js"></script>
-  <script src="js/algorithms/dfs.js"></script>
-  <script src="js/algorithms/dls.js"></script>
-  <script src="js/algorithms/best-first.js"></script>
   <script src="js/algorithms/registry.js"></script>
   <script src="js/ui/board.js"></script>
   <script src="js/ui/layout.js"></script>
