@@ -22,8 +22,8 @@
       this.parent = parent;
       this.action = action;
       this.g = g; // path cost from the root
-      this.h = h; // heuristic estimate (null for uninformed search)
-      this.f = f; // evaluation function used to order the frontier (null if unused)
+      this.h = h; // heuristic estimate h(n)
+      this.f = f; // evaluation function used to order the frontier (GBFS: f = h)
       this.depth = parent ? parent.depth + 1 : 0;
       this.id = id;
     }
@@ -85,10 +85,6 @@
       if (this.recentExplored.length > this.previewSize) this.recentExplored.shift();
     }
 
-    clearRecentExplored() {
-      this.recentExplored = [];
-    }
-
     /** Whether a snapshot should be recorded now. `force` lets the final goal/failure step through. */
     canRecord(force = false) {
       if (!this.trace) return false;
@@ -102,14 +98,13 @@
 
     /**
      * Store one visualisation snapshot.
-     * step = { kind, current, successors, frontier, frontierSize, exploredSize, note, limit }
+     * step = { kind: 'expand' | 'goal' | 'fail', current, successors, frontier, frontierSize, exploredSize, note }
      */
     record(step) {
       this.steps.push({
         index: this.steps.length,
         kind: step.kind,
         note: step.note || '',
-        limit: step.limit == null ? null : step.limit,
         current: step.current ? nodeInfo(step.current) : null,
         successors: step.successors || [],
         frontier: (step.frontier || []).map(nodeInfo),
@@ -133,11 +128,11 @@
         h: child.h,
         f: child.f,
         depth: child.depth,
-        status, // 'added' | 'explored' | 'in-frontier' | 'replaced'
+        status, // 'added' | 'explored' | 'in-frontier'
       };
     }
 
-    /** Build the final result. status: 'found' | 'cutoff' | 'failure' | 'limit' */
+    /** Build the final result. status: 'found' | 'failure' | 'limit' (expansion safety cap reached) */
     finish(status, goalNode, extra = {}) {
       const path = [];
       for (let n = goalNode; n; n = n.parent) {

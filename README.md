@@ -3,6 +3,10 @@
 **Interactive 8-Puzzle Problem Solver using AI Search Algorithms**
 Artificial Intelligence · Digital Assignment (Case Study)
 
+[![Live demo](https://img.shields.io/badge/live%20demo-ai--puzzle--solver.vercel.app-1f4e79)](https://ai-puzzle-solver.vercel.app)
+[![Tests](https://github.com/Kabin07/AI_Puzzle_solver/actions/workflows/tests.yml/badge.svg)](https://github.com/Kabin07/AI_Puzzle_solver/actions/workflows/tests.yml)
+![HTML5 · CSS3 · JavaScript ES6 · Bootstrap 5](https://img.shields.io/badge/stack-HTML5%20%C2%B7%20CSS3%20%C2%B7%20JavaScript%20ES6%20%C2%B7%20Bootstrap%205-555)
+
 | | |
 |---|---|
 | **Student** | Kabin Mukesh R |
@@ -10,6 +14,18 @@ Artificial Intelligence · Digital Assignment (Case Study)
 | **Assigned algorithm** | **No. 6: Greedy Best-First Search (GBFS)** |
 | **Live website** | https://ai-puzzle-solver.vercel.app (Vercel) |
 | **Repository** | https://github.com/Kabin07/AI_Puzzle_solver |
+
+## Contents
+
+- [Project Description](#project-description)
+- [Screenshots](#screenshots)
+- [Technologies Used](#technologies-used)
+- [Search Algorithm Implemented](#search-algorithm-implemented-greedy-best-first-search)
+- [Heuristics Used](#heuristics-used)
+- [Architecture](#architecture)
+- [How to Run the Project](#how-to-run-the-project)
+- [Deployment](#deployment)
+- [References](#references)
 
 ---
 
@@ -122,7 +138,8 @@ AI_Puzzle_solver/
 ├── assets/                 Logo / favicon
 ├── images/                 Screenshots used in this README
 ├── docs/                   ARCHITECTURE.md, DEMO_SCRIPT.md
-└── tests/run-tests.js      Test suite (Node, no dependencies)
+├── tests/run-tests.js      Test suite (Node, no dependencies)
+└── .github/workflows/      GitHub Actions: runs the tests on every push
 ```
 
 How a run works:

@@ -1,5 +1,5 @@
 /*
- * Binary min-heap used as the priority-queue frontier of GBFS, A* and UCS.
+ * Binary min-heap used as the priority-queue frontier of Greedy Best-First Search.
  * push / pop are O(log n). topK(k) returns the k best items in pop order in
  * O(k log k) without modifying the heap (used to display the Open List).
  */

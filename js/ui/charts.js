@@ -1,7 +1,7 @@
 /*
  * Minimal SVG charts (no external library).
  *  lineChart : value per expansion step (e.g. h(n) of the node being expanded)
- *  barChart  : one bar per algorithm on the comparison page (optional log scale)
+ *  barChart  : one bar per heuristic on the comparison page (optional log scale)
  */
 (function (root) {
   'use strict';

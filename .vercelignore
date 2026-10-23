@@ -4,3 +4,6 @@ tests
 !README.md
 .env*
 .vercel
+.github
+.gitattributes
+.gitignore

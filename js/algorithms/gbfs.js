@@ -1,5 +1,5 @@
 /*
- * ★ Greedy Best-First Search (GBFS)  — assigned algorithm (No. 6)
+ * Greedy Best-First Search (GBFS): assigned algorithm (No. 6)
  *
  * Evaluation function:  f(n) = h(n)
  * The frontier is a min-priority queue ordered by h(n); ties are broken
